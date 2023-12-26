@@ -4,7 +4,6 @@
 #include <memory>
 #include <type_traits>
 #include <stdexcept>
-#include <exception>
 
 namespace sp {
 // No general requirements on type T
@@ -18,12 +17,12 @@ class pool_allocator {
   using propagate_on_container_move_assignment = std::false_type;
   using propagate_on_container_swap = std::true_type;
 
-  explicit pool_allocator(size_type pool_size)
-      : trace_(new size_type[3]{pool_size, 0, 1}),
-        pool_head_(new pool_node{nullptr, 0, nullptr, nullptr}) {
+  explicit pool_allocator(size_type pool_size) {
     if (pool_size < 0) {
       throw std::invalid_argument("pool_allocator: negative pool size");
     }
+    trace_ = new size_type[3]{pool_size, 0, 1};
+    pool_head_ = new pool_node{nullptr, 0, nullptr, nullptr};
     pool_ = static_cast<T*>(operator new(pool_size * sizeof(T)));
     pool_node* pl = new pool_node{pool_, trace_[kLimitInd], nullptr, nullptr};
     pool_head_->bind(pl, pl);
@@ -44,19 +43,13 @@ class pool_allocator {
   }
 
   pool_allocator& operator=(const pool_allocator& other) noexcept {
-    trace_ = other.trace_;
-    pool_ = other.pool_;
-    pool_head_ = other.pool_head_;
-    if (trace_) {
-      ++trace_[kRefInd];
-    }
+    pool_allocator cpy(other);
+    swap(cpy);
     return *this;
   }
 
   pool_allocator& operator=(pool_allocator&& other) noexcept {
-    trace_ = std::exchange(other.trace_, nullptr);
-    pool_ = std::exchange(other.pool_, nullptr);
-    pool_head_ = std::exchange(other.pool_head_, nullptr);
+    swap(other);
     return *this;
   }
 
@@ -64,8 +57,8 @@ class pool_allocator {
     if (trace_) {
       --trace_[kRefInd];
       if (!trace_[kRefInd]) {
-        operator delete(pool_, trace_[kLimitInd] * sizeof(T));
-        delete trace_;
+        operator delete(pool_);
+        delete[] trace_;
         delete pool_head_->next;
         delete pool_head_;
       }

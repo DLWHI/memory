@@ -3,135 +3,133 @@
 #include <cstdint>  // int64_t
 #include <memory>
 #include <type_traits>
+#include <limits>
 #include <stdexcept>
 
 namespace sp {
 // No general requirements on type T
 template <typename T>
-class reseving_allocator {
+class reserving_allocator {
  public:
   using value_type = T;
   using size_type = int64_t;
   using difference_type = int64_t;
   using propagate_on_container_copy_assignment = std::false_type;
   using propagate_on_container_move_assignment = std::false_type;
-  using propagate_on_container_swap = std::true_type;
+  using propagate_on_container_swap = std::false_type;
+  using is_always_equal = std::true_type;
 
-  constexpr explicit reseving_allocator()
-      : trace_(new size_type[3]{0, 0, 0}), pool_(nullptr) {}
+  reserving_allocator() noexcept : pool_(nullptr), count_(0) {}
 
-  constexpr explicit reseving_allocator(size_type count, size_type limit = 0)
-      : trace_(new size_type[2]{limit, count, 0}) {
-    if (limit < 0) {
-      throw std::invalid_argument("pool_allocator: negative pool size");
-    } else if (count < 0) {
+  explicit reserving_allocator(size_type count) : count_(count) {
+    if (count < 0) {
       throw std::invalid_argument("pool_allocator: negative object count");
     }
-    pool_ = new pool_node{static_cast<T*>(operator new(sizeof(T)), nullptr)};
+    pool_ = new pool_node{static_cast<T*>(operator new(sizeof(T))), nullptr};
     pool_node* pl = pool_;
-    for (--count; count; --count) {
-      pl->next = new pool_node{static_cast<T*>(operator new(sizeof(T)), nullptr)};
-      pl = pl->next;
-    }
-  }
-
-  constexpr reseving_allocator(const reseving_allocator& other) noexcept
-      : trace_(other.trace_), pool_(other.pool_) {
-    ++trace_[kRefInd];
-  }
-
-  constexpr reseving_allocator(reseving_allocator&& other) noexcept
-      : trace_(other.trace_), pool_(other.pool_) {
-    other.trace_ = nullptr;
-    other.pool_ = nullptr;
-  }
-
-  constexpr reseving_allocator& operator=(
-      const reseving_allocator& other) noexcept {
-    trace_ = other.trace_;
-    pool_ = other.pool_;
-    ++ref_count_[kRefInd];
-    return *this;
-  }
-
-  constexpr reseving_allocator& operator=(reseving_allocator&& other) noexcept {
-    trace_ = std::exchange(other.trace_, nullptr);
-    pool_ = std::exchange(other.pool_, nullptr);
-    return *this;
-  }
-
-  constexpr virtual ~reseving_allocator() noexcept {
-    --trace_[kRefInd];
-    if (!trace_[kRefInd]) {
-      delete trace_;
-      pool_node* fwd = pool_->next;
-      for (; fwd; pool_ = fwd, fwd = fwd->next) {
-        delete pool_;
+    try {
+      for (; count; --count) {
+        pl->next =
+            new pool_node{static_cast<T*>(operator new(sizeof(T))), nullptr};
+        pl = pl->next;
       }
-      delete pool_;
+    } catch (...) {
+      clear();
+      throw;
     }
+  }
+
+  reserving_allocator(const reserving_allocator& other) noexcept
+      : reserving_allocator(other.count_) {}
+
+  reserving_allocator(reserving_allocator&& other) noexcept
+      : pool_(other.pool_), count_(other.count_) {
+    other.pool_ = nullptr;
+    other.count_ = 0;
+  }
+
+  reserving_allocator& operator=(const reserving_allocator& other) noexcept {
+    reserving_allocator cpy(other);
+    *this = std::move(cpy);
+    return *this;
+  }
+
+  reserving_allocator& operator=(reserving_allocator&& other) noexcept {
+    std::swap(pool_, other.pool_);
+    std::swap(count_, other.count_);
+    return *this;
+  }
+
+  virtual ~reserving_allocator() noexcept {
+    clear();
   };
 
   //==============================================================================
 
-  constexpr size_type capacity() const noexcept {
-    return trace_[kCapInd];
-  }
+  size_type capacity() const noexcept { return count_; }
 
   //==============================================================================
 
-  constexpr void swap(reseving_allocator& other) noexcept {
-    std::swap(trace_, other.trace_);
-    std::swap(pool_, other.pool_);
+  void clear() noexcept {
+    if (pool_) {
+      pool_node* fwd = pool_->next;
+      for (; fwd; pool_ = fwd, fwd = fwd->next) {
+        operator delete(pool_->object);
+        delete pool_;
+      }
+      operator delete(pool_->object);
+      delete pool_;
+    }
+    count_ = 0;
   }
 
-  constexpr T* allocate(size_type count) {
-    if (!trace_) {
-      throw std::bad_alloc("pool_allocator: using moved-out allocator");
+  void swap(reserving_allocator& other) noexcept {
+    std::swap(pool_, other.pool_);
+    std::swap(count_, other.count_);
+  }
+
+  T* allocate(size_type count) {
+    if (count != 1) {
+      throw std::bad_alloc();
     } else if (pool_) {
-      pool_node dead = pool_;
+      pool_node* dead = pool_;
       T* ptr = pool_->object;
       pool_ = pool_->next;
       delete dead;
+      --count_;
       return ptr;
     } else {
-      return static_cast<T*>(operator new(count*sizeof(T)));
+      return static_cast<T*>(operator new(sizeof(T)));
     }
   }
 
-  constexpr void deallocate(T* pointer) noexcept {
-    if (!trace_) {
-      return;  // or throw?
-    } else if ()
+  void deallocate(T* pointer, size_type count) noexcept {
+    (void)count;
+    ++count_;
     pool_node* pl = new pool_node{pointer, pool_};
     pool_ = pl;
   }
 
-  constexpr bool operator==(const reseving_allocator& other) const noexcept {
-    return trace_ == other.trace_;
+  bool operator==(const reserving_allocator& other) const noexcept {
+    return true;
   }
 
-  constexpr bool operator!=(const reseving_allocator& other) const noexcept {
-    return trace_ != other.trace_;
+  bool operator!=(const reserving_allocator& other) const noexcept {
+    return false;
   }
 
  private:
   struct pool_node {
     T* object;
     pool_node* next;
-  }
+  };
 
-  static constexpr kLimitInd = 0;
-  static constexpr kCapInd = 1;
-  static constexpr kRefInd = 2;
-
-  size_type* trace_;
   pool_node* pool_;
+  size_type count_;
 };
 
 template <typename T>
-constexpr void swap(reseving_allocator<T>& lhs,
-                    reseving_allocator<T>& rhs) noexcept {
+void swap(reserving_allocator<T>& lhs, reserving_allocator<T>& rhs) noexcept {
   lhs.swap(rhs);
 }
 }  // namespace sp

@@ -8,7 +8,7 @@ TEST(PoolAlloc, ctor) {
   sp::pool_allocator<safe> al(size);
 
   ASSERT_EQ(al.max_size(), size);
-  ASSERT_NO_THROW(al.deallocate(al.allocate(size), size));
+  al.deallocate(al.allocate(size), size);
   ASSERT_THROW(al.allocate(size + 1), std::bad_alloc);
 }
 
@@ -25,7 +25,7 @@ TEST(PoolAlloc, ctor_copy) {
   ASSERT_EQ(al.max_size(), cpy.max_size());
   ASSERT_EQ(al, cpy);
   safe* ptr = al.allocate(size);
-  ASSERT_NO_THROW(cpy.deallocate(ptr, size));
+  cpy.deallocate(ptr, size);
   ASSERT_THROW(cpy.allocate(size + 1), std::bad_alloc);
 }
 
@@ -37,7 +37,7 @@ TEST(PoolAlloc, ctor_move) {
   ASSERT_EQ(mv.max_size(), size);
   ASSERT_NE(al, mv);
   ASSERT_THROW(al.allocate(10), std::bad_alloc);
-  ASSERT_NO_THROW(mv.deallocate(mv.allocate(size), size));
+  mv.deallocate(mv.allocate(size), size);
   ASSERT_THROW(mv.allocate(size + 1), std::bad_alloc);
 }
 
@@ -51,7 +51,7 @@ TEST(PoolAlloc, ctor_assign_copy) {
   ASSERT_EQ(al.max_size(), cpy.max_size());
   ASSERT_EQ(al, cpy);
   safe* ptr = al.allocate(size);
-  ASSERT_NO_THROW(cpy.deallocate(ptr, size));
+  cpy.deallocate(ptr, size);
   ASSERT_THROW(cpy.allocate(size * 2 + 1), std::bad_alloc);
 }
 
@@ -64,8 +64,7 @@ TEST(PoolAlloc, ctor_assign_move) {
 
   ASSERT_EQ(mv.max_size(), size);
   ASSERT_NE(al, mv);
-  ASSERT_THROW(al.allocate(10), std::bad_alloc);
-  ASSERT_NO_THROW(mv.deallocate(mv.allocate(size), size));
+  mv.deallocate(mv.allocate(size), size);
   ASSERT_THROW(mv.allocate(size + 1), std::bad_alloc);
 }
 
@@ -77,7 +76,8 @@ TEST(PoolAlloc, swap) {
   sp::pool_allocator<safe> lhs_cpy(lhs);
   sp::pool_allocator<safe> rhs_cpy(rhs);
 
-  std::swap(rhs, lhs);
+  using std::swap;
+  swap(rhs, lhs);
 
   ASSERT_EQ(rhs, lhs_cpy);
   ASSERT_EQ(lhs, rhs_cpy);
@@ -153,33 +153,36 @@ TEST(PoolAlloc, alloc_continious_race) {
 TEST(PoolAlloc, alloc_continious_race_non_uniform) {
   constexpr int64_t size = 20;
   constexpr int64_t allocs[] = {2, 7, 4, 8, 10};
+  constexpr int64_t allocs_size = sizeof(allocs) / sizeof(int64_t);
   sp::pool_allocator<safe> al(size);
 
-  safe* ptr_array[sizeof(allocs) / sizeof(int64_t)];
+  safe* ptr_array[allocs_size];
 
   ASSERT_NO_THROW(ptr_array[0] = al.allocate(allocs[0]));
-  for (size_t i = 1; i < sizeof(allocs) / sizeof(int64_t); ++i) {
+  for (int i = 1; i < allocs_size; ++i) {
     ASSERT_NO_THROW(ptr_array[i] = al.allocate(allocs[i]));
     ASSERT_NE(ptr_array[i], nullptr);
     al.deallocate(ptr_array[i - 1], allocs[i - 1]);
     ASSERT_EQ(al.leftover(), size - allocs[i]);
   }
+  al.deallocate(ptr_array[allocs_size - 1], allocs[allocs_size - 1]);
 }
 
 TEST(PoolAlloc, alloc_continious_exceed) {
   constexpr int64_t size = 20;
   constexpr int64_t allocs[] = {2, 7, 4};
+  constexpr int64_t allocs_size = sizeof(allocs) / sizeof(int64_t);
   constexpr int64_t extra_size = 10;
   sp::pool_allocator<safe> al(size);
 
-  safe* ptr_array[sizeof(allocs) / sizeof(int64_t)];
+  safe* ptr_array[allocs_size];
 
-  for (size_t i = 0; i < sizeof(allocs) / sizeof(int64_t); ++i) {
+  for (int i = 0; i < allocs_size; ++i) {
     ASSERT_NO_THROW(ptr_array[i] = al.allocate(allocs[i]));
     ASSERT_NE(ptr_array[i], nullptr);
   }
   ASSERT_THROW(al.allocate(extra_size), std::bad_alloc);
-  for (size_t i = 0; i < sizeof(allocs) / sizeof(int64_t); ++i) {
+  for (int i = 0; i < allocs_size; ++i) {
     al.deallocate(ptr_array[i], allocs[i]);
   }
 }
