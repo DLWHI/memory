@@ -3,10 +3,6 @@ project(memory)
 
 set(CMAKE_CXX_STANDARD 14)
 
-include_directories(../include)
-
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
 include(EnableGoogleTest)
 
 add_executable(

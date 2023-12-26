@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 11)
 
 include_directories(include)
 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 set(HEADERS
   include/sp/memory.h
   include/sp/node_iterator.h
@@ -15,3 +17,5 @@ set(HEADERS
 )
 
 install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/sp)
+
+add_subdirectory(tests EXCLUDE_FROM_ALL)
