@@ -1,13 +1,9 @@
 cmake_minimum_required(VERSION 3.0...3.5)
-project(containers)
+project(memory)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 
 include_directories(include)
-
-add_compile_options(-g)
-
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 set(HEADERS
   include/sp/memory.h
@@ -19,16 +15,3 @@ set(HEADERS
 )
 
 install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/sp)
-
-include(EnableGoogleTest)
-
-add_executable(
-  unit_tests
-  tests/test_pool_allocator.cc
-  tests/test_reserving_allocator.cc
-)
-target_link_libraries(
-  unit_tests
-  GTest::gtest_main
-)
-gtest_discover_tests(unit_tests)
