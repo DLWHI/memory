@@ -90,9 +90,11 @@ class pool_allocator {
   //==============================================================================
 
   void swap(pool_allocator& other) noexcept {
-    std::swap(trace_, other.trace_);
-    std::swap(pool_, other.pool_);
-    std::swap(pool_head_, other.pool_head_);
+    if (trace_ != other.trace_) {
+      std::swap(trace_, other.trace_);
+      std::swap(pool_, other.pool_);
+      std::swap(pool_head_, other.pool_head_);
+    }
   }
 
   T* allocate(size_type count) {

@@ -118,6 +118,15 @@ TEST(ReserveAlloc, alloc) {
   ASSERT_EQ(al.capacity(), alloc_count);
 }
 
+TEST(ReserveAlloc, alloc_zero) {
+  constexpr int64_t size = 20;
+  sp::reserving_allocator<safe> al(size);
+
+  ASSERT_THROW(al.allocate(0), std::bad_alloc);
+
+  ASSERT_EQ(al.capacity(), size);
+}
+
 TEST(ReserveAlloc, alloc_existing) {
   constexpr int64_t alloc_count = 20;
   constexpr int64_t size = 20;

@@ -94,6 +94,17 @@ TEST(PoolAlloc, alloc_chunk) {
   al.deallocate(ptr, alloc_size);
 }
 
+TEST(PoolAlloc, alloc_zero) {
+  constexpr int64_t size = 20;
+  constexpr int64_t alloc_size = 0;
+  sp::pool_allocator<safe> al(size);
+
+  safe* ptr;
+  ASSERT_NO_THROW(ptr = al.allocate(0));
+  ASSERT_NE(ptr, nullptr);
+  al.deallocate(ptr, alloc_size);
+}
+
 TEST(PoolAlloc, alloc_almost_all) {
   constexpr int64_t size = 20;
   sp::pool_allocator<safe> al(size);
