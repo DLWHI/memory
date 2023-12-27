@@ -7,6 +7,8 @@ include_directories(include)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+set(INSTALL_GTEST OFF)
+
 set(HEADERS
   include/sp/memory.h
   include/sp/node_iterator.h
@@ -18,4 +20,15 @@ set(HEADERS
 
 install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/sp)
 
-add_subdirectory(tests EXCLUDE_FROM_ALL)
+include(EnableGoogleTest)
+
+add_executable(
+  unit_tests
+  tests/test_pool_allocator.cc
+  tests/test_reserving_allocator.cc
+)
+target_link_libraries(
+  unit_tests
+  GTest::gtest_main
+)
+gtest_discover_tests(unit_tests)
