@@ -74,6 +74,13 @@ class pool_allocator {
     return 0;
   }
 
+  size_type allocd() const noexcept {
+    if (trace_) {
+      return trace_[kStateInd];
+    }
+    return 0;
+  }
+
   size_type leftover() const noexcept {
     if (trace_) {
       return trace_[kLimitInd] - trace_[kStateInd];
