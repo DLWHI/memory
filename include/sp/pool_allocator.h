@@ -1,5 +1,5 @@
-#ifndef SP_MEMORY_LIMIT_ALLOCATOR_H_
-#define SP_MEMORY_LIMIT_ALLOCATOR_H_
+#ifndef SP_MEMORY_POOL_ALLOCATOR_H_
+#define SP_MEMORY_POOL_ALLOCATOR_H_
 #include <cstdint>  // int64_t
 #include <memory>
 #include <type_traits>
@@ -175,4 +175,4 @@ void swap(pool_allocator<T>& lhs, pool_allocator<T>& rhs) noexcept {
   lhs.swap(rhs);
 }
 }  // namespace sp
-#endif  // SP_MEMORY_LIMIT_ALLOCATOR_H_
+#endif  // SP_MEMORY_POOL_ALLOCATOR_H_
