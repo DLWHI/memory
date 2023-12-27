@@ -1,7 +1,7 @@
 #ifndef SP_MEMORY_POINTER_ITERATOR_H_
 #define SP_MEMORY_POINTER_ITERATOR_H_
-#include <cstdint>  // int64_t
-#include <iterator>  // std::random_access_iterator_tag
+#include <cstdint>      // int64_t
+#include <iterator>     // std::random_access_iterator_tag
 #include <type_traits>  // std::is_same, std::remove_cv
 
 namespace sp {
@@ -23,8 +23,7 @@ class pointer_iterator {
   using value_type = T;
   using pointer = T*;
   using reference = T&;
-  using diff_t = sp::diff_t;
-  using difference_type = diff_t;
+  using difference_type = int64_t;
 
   constexpr pointer_iterator() noexcept : ptr_(nullptr){};
   constexpr explicit pointer_iterator(T* data) noexcept : ptr_(data){};
@@ -59,24 +58,25 @@ class pointer_iterator {
     return (ptr_ - other.ptr_) <= 0;
   }
 
-  constexpr pointer_iterator operator+(diff_t delta) const noexcept {
+  constexpr pointer_iterator operator+(difference_type delta) const noexcept {
     return pointer_iterator(ptr_ + delta);
   }
 
-  constexpr pointer_iterator operator-(diff_t delta) const noexcept {
+  constexpr pointer_iterator operator-(difference_type delta) const noexcept {
     return pointer_iterator(ptr_ - delta);
   }
 
-  constexpr diff_t operator-(const pointer_iterator& other) const noexcept {
+  constexpr difference_type operator-(
+      const pointer_iterator& other) const noexcept {
     return ptr_ - other.ptr_;
   }
 
-  constexpr pointer_iterator& operator+=(diff_t delta) noexcept {
+  constexpr pointer_iterator& operator+=(difference_type delta) noexcept {
     ptr_ += delta;
     return *this;
   }
 
-  constexpr pointer_iterator& operator-=(diff_t delta) noexcept {
+  constexpr pointer_iterator& operator-=(difference_type delta) noexcept {
     ptr_ -= delta;
     return *this;
   }
@@ -98,7 +98,9 @@ class pointer_iterator {
     return *this;
   }
 
-  constexpr T operator[](diff_t delta) noexcept { return *(ptr_ + delta); }
+  constexpr T operator[](difference_type delta) noexcept {
+    return *(ptr_ + delta);
+  }
 
   constexpr operator pointer_iterator<const T, Container>() const noexcept {
     return pointer_iterator<const T, Container>(ptr_);

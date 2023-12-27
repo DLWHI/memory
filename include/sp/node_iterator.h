@@ -15,8 +15,7 @@ class node_iterator {
   using value_type = typename Container::value_type;
   using pointer = typename Container::pointer;
   using reference = typename Container::reference;
-  using diff_t = sp::diff_t;
-  using difference_type = diff_t;
+  using difference_type = int64_t;
 
   constexpr node_iterator() noexcept : node_(nullptr){};
   constexpr explicit node_iterator(T* data) noexcept : node_(data){};
@@ -52,24 +51,24 @@ class node_iterator {
 //     return (node_ - other.node_) <= 0;
 //   }
 
-//   constexpr node_iterator operator+(diff_t delta) const noexcept {
+//   constexpr node_iterator operator+(difference_type delta) const noexcept {
 //     return node_iterator(node_ + delta);
 //   }
 
-//   constexpr node_iterator operator-(diff_t delta) const noexcept {
+//   constexpr node_iterator operator-(difference_type delta) const noexcept {
 //     return node_iterator(node_ - delta);
 //   }
 
-//   constexpr diff_t operator-(const node_iterator& other) const noexcept {
+//   constexpr difference_type operator-(const node_iterator& other) const noexcept {
 //     return node_ - other.node_;
 //   }
 
-//   constexpr node_iterator& operator+=(diff_t delta) noexcept {
+//   constexpr node_iterator& operator+=(difference_type delta) noexcept {
 //     node_ += delta;
 //     return *this;
 //   }
 
-//   constexpr node_iterator& operator-=(diff_t delta) noexcept {
+//   constexpr node_iterator& operator-=(difference_type delta) noexcept {
 //     node_ -= delta;
 //     return *this;
 //   }

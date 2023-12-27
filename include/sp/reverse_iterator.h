@@ -11,6 +11,7 @@ class reverse_iterator {
   using value_type = typename BidIt::value_type;
   using pointer = typename BidIt::pointer;
   using reference = typename BidIt::reference;
+  using difference_type = typename BidIt::difference_type;
 
   constexpr explicit reverse_iterator(const BidIt& it) : fwd_it_(it){};
   constexpr virtual ~reverse_iterator() = default;
@@ -44,24 +45,24 @@ class reverse_iterator {
     return (fwd_it_ - other.ptr_) >= 0;
   }
 
-  constexpr reverse_iterator operator+(diff_t delta) const {
+  constexpr reverse_iterator operator+(difference_type delta) const {
     return reverse_iterator(fwd_it_ - delta);
   }
 
-  constexpr reverse_iterator operator-(diff_t delta) const {
+  constexpr reverse_iterator operator-(difference_type delta) const {
     return reverse_iterator(fwd_it_ + delta);
   }
 
-  constexpr diff_t operator-(const reverse_iterator& other) const {
+  constexpr difference_type operator-(const reverse_iterator& other) const {
     return other.fwd_it_ - fwd_it_;
   }
 
-  constexpr reverse_iterator& operator+=(diff_t delta) {
+  constexpr reverse_iterator& operator+=(difference_type delta) {
     fwd_it_ += delta;
     return *this;
   }
 
-  constexpr reverse_iterator& operator-=(diff_t delta) {
+  constexpr reverse_iterator& operator-=(difference_type delta) {
     fwd_it_ -= delta;
     return *this;
   }
