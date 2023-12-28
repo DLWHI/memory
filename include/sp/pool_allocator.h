@@ -22,9 +22,9 @@ class pool_allocator {
       throw std::invalid_argument("pool_allocator: negative pool size");
     }
     trace_ = new size_type[3]{pool_size, 0, 1};
-    pool_head_ = new pool_node{nullptr, 0, nullptr, nullptr};
+    pool_head_ = new pool_node{0, nullptr, nullptr, nullptr};
     pool_ = static_cast<T*>(operator new(pool_size * sizeof(T)));
-    pool_node* pl = new pool_node{pool_, trace_[kLimitInd], nullptr, nullptr};
+    pool_node* pl = new pool_node{trace_[kLimitInd], nullptr, nullptr, pool_};
     pool_head_->bind(pl, pl);
   }
 
@@ -117,7 +117,7 @@ class pool_allocator {
   }
 
   void deallocate(T* pointer, size_type count) noexcept {
-    if (!trace_) {
+    if (!trace_ || !pointer) {
       return;
     }
     pool_node* pl = pool_head_->next;
@@ -127,7 +127,7 @@ class pool_allocator {
     if (end == pointer) {
       pl->size += count;
     } else {
-      pool_node* return_node = new pool_node{pointer, count, nullptr, nullptr};
+      pool_node* return_node = new pool_node{count, nullptr, nullptr, pointer};
       return_node->bind(pl, pl->next);
       pl = return_node;
     }
@@ -164,10 +164,10 @@ class pool_allocator {
       next = nullptr;
     }
 
-    T* ptr;
     size_type size;
     pool_node* next;
     pool_node* prev;
+    T* ptr;
   };
 
   static constexpr size_type kLimitInd = 0;

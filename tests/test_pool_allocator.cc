@@ -94,6 +94,23 @@ TEST(PoolAlloc, alloc_chunk) {
   al.deallocate(ptr, alloc_size);
 }
 
+TEST(PoolAlloc, alloc_from_diff) {
+  constexpr int64_t size = 20;
+  constexpr int64_t alloc_size = 7;
+  sp::pool_allocator<safe> al1(size);
+  sp::pool_allocator<safe> al2(size);
+  ASSERT_NE(al1, al2);
+
+  safe* ptr1;
+  safe* ptr2;
+  ASSERT_NO_THROW(ptr1 = al1.allocate(alloc_size));
+  ASSERT_NE(ptr1, nullptr);
+  ASSERT_NO_THROW(ptr2 = al2.allocate(alloc_size));
+  ASSERT_NE(ptr2, nullptr);
+  al1.deallocate(ptr1, alloc_size);
+  al2.deallocate(ptr2, alloc_size);
+}
+
 TEST(PoolAlloc, alloc_zero) {
   constexpr int64_t size = 20;
   constexpr int64_t alloc_size = 0;
@@ -102,7 +119,7 @@ TEST(PoolAlloc, alloc_zero) {
   safe* ptr;
   ASSERT_NO_THROW(ptr = al.allocate(0));
   ASSERT_NE(ptr, nullptr);
-  al.deallocate(ptr, alloc_size);
+  al.deallocate(ptr, 0);
 }
 
 TEST(PoolAlloc, alloc_almost_all) {
@@ -196,4 +213,23 @@ TEST(PoolAlloc, alloc_continious_exceed) {
   for (int i = 0; i < allocs_size; ++i) {
     al.deallocate(ptr_array[i], allocs[i]);
   }
+}
+
+TEST(PoolAlloc, alloc_dealloc_nullptr) {
+  constexpr int64_t size = 20;
+  sp::pool_allocator<safe> al(size);
+
+  al.deallocate(nullptr, 0);
+
+  safe* ptr = al.allocate(size);
+  al.deallocate(ptr, size);
+}
+
+TEST(PoolAlloc, alloc_empty) {
+  constexpr int64_t size = 20;
+  sp::pool_allocator<safe> al(size);
+
+  al.deallocate(nullptr, 0);
+
+  ASSERT_NO_THROW(al.deallocate(al.allocate(0), 0));
 }
