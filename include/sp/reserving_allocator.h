@@ -40,7 +40,7 @@ class reserving_allocator {
   }
 
   reserving_allocator(const reserving_allocator& other) noexcept
-      : reserving_allocator(other.count_) {}
+      : reserving_allocator() {}
 
   reserving_allocator(reserving_allocator&& other) noexcept
       : pool_(other.pool_), count_(other.count_) {

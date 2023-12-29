@@ -29,14 +29,12 @@ TEST(ReserveAlloc, ctor_copy) {
   sp::reserving_allocator<safe> al(size);
   sp::reserving_allocator<safe> cpy(al);
 
-  ASSERT_EQ(al.capacity(), cpy.capacity());
-
   for (int i = 0; i < size; ++i) {
     ASSERT_NO_THROW(cpy.deallocate(al.allocate(1), 1));
   }
 
   ASSERT_EQ(al.capacity(), 0);
-  ASSERT_EQ(cpy.capacity(), 40);
+  ASSERT_EQ(cpy.capacity(), size);
 }
 
 TEST(ReserveAlloc, ctor_move) {
@@ -66,14 +64,12 @@ TEST(ReserveAlloc, ctor_assign_copy) {
 
   cpy = al;
 
-  ASSERT_EQ(al.capacity(), cpy.capacity());
-
   for (int i = 0; i < size; ++i) {
     ASSERT_NO_THROW(cpy.deallocate(al.allocate(1), 1));
   }
 
   ASSERT_EQ(al.capacity(), 0);
-  ASSERT_EQ(cpy.capacity(), 40);
+  ASSERT_EQ(cpy.capacity(), size);
 }
 
 TEST(ReserveAlloc, ctor_assign_move) {
@@ -91,14 +87,14 @@ TEST(ReserveAlloc, swap) {
   sp::reserving_allocator<safe> lhs(size);
   sp::reserving_allocator<safe> rhs(size * 2);
 
-  sp::reserving_allocator<safe> lhs_cpy(lhs);
-  sp::reserving_allocator<safe> rhs_cpy(rhs);
+  int64_t lhs_cap = lhs.capacity();
+  int64_t rhs_cap = rhs.capacity();
 
   using std::swap;
   swap(rhs, lhs);
 
-  ASSERT_EQ(rhs.capacity(), lhs_cpy.capacity());
-  ASSERT_EQ(lhs.capacity(), rhs_cpy.capacity());
+  ASSERT_EQ(rhs.capacity(), lhs_cap);
+  ASSERT_EQ(lhs.capacity(), rhs_cap);
 }
 
 TEST(ReserveAlloc, alloc) {
