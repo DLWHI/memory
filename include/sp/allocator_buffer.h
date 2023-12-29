@@ -6,6 +6,12 @@
 namespace sp {
 template <typename T, typename Allocator>
 struct pointer_buffer {
+    using al_traits = std::allocator_traits<Allocator>;
+    using value_type = T;
+    using pointer = al_traits::pointer;
+    using size_type = int64_t;
+    using difference_type = int64_t;
+
     constexpr explicit pointer_buffer(Allocator* al = nullptr)
         : alc(al), ptr(nullptr), cap(0) {}
     constexpr pointer_buffer(size_type size, Allocator* al,
