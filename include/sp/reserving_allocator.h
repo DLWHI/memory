@@ -19,49 +19,35 @@ class reserving_allocator {
   using propagate_on_container_swap = std::false_type;
   using is_always_equal = std::true_type;
 
-  reserving_allocator() noexcept : pool_(nullptr), count_(0) {}
+  reserving_allocator() noexcept {}
 
-  explicit reserving_allocator(size_type count) : count_(count) {
-    if (count < 0) {
-      throw std::invalid_argument("pool_allocator: negative object count");
-    }
-    pool_ = new pool_node{static_cast<T*>(operator new(sizeof(T))), nullptr};
-    pool_node* pl = pool_;
-    try {
-      for (; count; --count) {
-        pl->next =
-            new pool_node{static_cast<T*>(operator new(sizeof(T))), nullptr};
-        pl = pl->next;
-      }
-    } catch (...) {
-      clear();
-      throw;
-    }
+  explicit reserving_allocator(size_type count) {
+    
   }
 
-  reserving_allocator(const reserving_allocator& other) noexcept
-      : reserving_allocator() {}
-
-  reserving_allocator(reserving_allocator&& other) noexcept
-      : pool_(other.pool_), count_(other.count_) {
-    other.pool_ = nullptr;
-    other.count_ = 0;
+  template <typename U>
+  reserving_allocator(const reserving_allocator<U>& other) noexcept {
+    ++ref_;
   }
 
-  reserving_allocator& operator=(const reserving_allocator& other) noexcept {
-    reserving_allocator cpy(other);
-    *this = std::move(cpy);
+  template <typename U>
+  reserving_allocator(reserving_allocator<U>&& other) noexcept {};
+
+  template <typename U>
+  reserving_allocator& operator=(const reserving_allocator<U>& other) noexcept {
+    ++ref_;
     return *this;
   }
 
-  reserving_allocator& operator=(reserving_allocator&& other) noexcept {
-    std::swap(pool_, other.pool_);
-    std::swap(count_, other.count_);
+  template <typename U>
+  reserving_allocator& operator=(reserving_allocator<U>&& other) noexcept {
     return *this;
-  }
+  };
 
   virtual ~reserving_allocator() noexcept {
-    clear();
+    if (!--ref_) {
+      clear();
+    }
   };
 
   //==============================================================================
@@ -81,6 +67,27 @@ class reserving_allocator {
       delete pool_;
     }
     count_ = 0;
+  }
+
+  void populate(size_type count) {
+    if (count < 0) {
+      throw std::invalid_argument("pool_allocator: negative object count");
+    }
+    if (pool_) {
+      pool_ = new pool_node{static_cast<T*>(operator new(sizeof(T))), nullptr};
+      --count;
+    }
+    pool_node* pl = pool_;
+    try {
+      for (; count; --count) {
+        pl->next =
+            new pool_node{static_cast<T*>(operator new(sizeof(T))), nullptr};
+        pl = pl->next;
+      }
+    } catch (...) {
+      clear();
+      throw;
+    }
   }
 
   void swap(reserving_allocator& other) noexcept {
@@ -124,13 +131,23 @@ class reserving_allocator {
     pool_node* next;
   };
 
-  pool_node* pool_;
-  size_type count_;
+  static pool_node* pool_;
+  static size_type count_;
+  static size_type ref_;
 };
 
 template <typename T>
 void swap(reserving_allocator<T>& lhs, reserving_allocator<T>& rhs) noexcept {
   lhs.swap(rhs);
 }
+
+template <typename T>
+typename reserving_allocator<T>::pool_node* reserving_allocator<T>::pool_ = nullptr;
+
+template <typename T>
+typename reserving_allocator<T>::size_type reserving_allocator<T>::count_ = 0;
+
+template <typename T>
+typename reserving_allocator<T>::size_type reserving_allocator<T>::ref_ = 0;
 }  // namespace sp
 #endif  // SP_MEMORY_RESERVING_ALLOCATOR_H_

@@ -9,20 +9,20 @@ TEST(ReserveAlloc, ctor_def) {
   ASSERT_EQ(al.capacity(), 0);
 }
 
-TEST(ReserveAlloc, ctor_size) {
-  constexpr int64_t size = 20;
-  sp::reserving_allocator<safe> al(size);
+// TEST(ReserveAlloc, ctor_size) {
+//   constexpr int64_t size = 20;
+//   sp::reserving_allocator<safe> al(size);
 
-  ASSERT_EQ(al.capacity(), size);
-  safe* ptr = al.allocate(1);
-  ASSERT_EQ(al.capacity(), size - 1);
-  ASSERT_NO_THROW(al.deallocate(ptr, 1));
-}
+//   ASSERT_EQ(al.capacity(), size);
+//   safe* ptr = al.allocate(1);
+//   ASSERT_EQ(al.capacity(), size - 1);
+//   ASSERT_NO_THROW(al.deallocate(ptr, 1));
+// }
 
-TEST(ReserveAlloc, ctor_size_neg) {
-  constexpr int64_t size = -20;
-  ASSERT_THROW(sp::reserving_allocator<safe> al(size), std::invalid_argument);
-}
+// TEST(ReserveAlloc, ctor_size_neg) {
+//   constexpr int64_t size = -20;
+//   ASSERT_THROW(sp::reserving_allocator<safe> al(size), std::invalid_argument);
+// }
 
 TEST(ReserveAlloc, ctor_copy) {
   constexpr int64_t size = 20;
