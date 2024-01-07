@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0...3.5)
 project(memory)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 
 include_directories(include)
 
@@ -24,6 +24,7 @@ include(EnableGoogleTest)
 
 add_executable(
   unit_tests
+  tests/main.cc
   tests/test_pool_allocator.cc
   tests/test_reserving_allocator.cc
 )
