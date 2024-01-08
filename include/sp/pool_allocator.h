@@ -1,6 +1,5 @@
 #ifndef SP_MEMORY_POOL_ALLOCATOR_H_
 #define SP_MEMORY_POOL_ALLOCATOR_H_
-#include <cstdint>  // int64_t & uint8_t
 #include <memory>
 #include <type_traits>
 #include <stdexcept>

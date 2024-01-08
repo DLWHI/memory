@@ -10,7 +10,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(INSTALL_GTEST OFF)
 
 set(HEADERS
-  include/sp/memory.h
+  include/sp/bit_iterator.h
   include/sp/node_iterator.h
   include/sp/pointer_iterator.h
   include/sp/reverse_iterator.h

@@ -1,15 +1,9 @@
 #ifndef SP_MEMORY_BIT_ITERATOR_H_
 #define SP_MEMORY_BIT_ITERATOR_H_
-#include <cstdint>      // int64_t
-#include <iterator>     // std::random_access_iterator_tag
-#include <type_traits>  // std::is_same, std::remove_cv
+#include <cstdint>      // int64_t & uint8_t
+#include <iterator>     // std::bidirectional_iterator_tag
 
 namespace sp {
-// Container - is not used inside of class, but allows different containers
-//             with same template type produce different iterators
-// If std::is_same<T, typename Container::value_type>::value evaluates to false
-// the program has undefined behavior
-// No general requirements on template types.
 class bit_iterator final {
  public:
   using iterator_category = std::bidirectional_iterator_tag;

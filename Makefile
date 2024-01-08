@@ -39,7 +39,7 @@ MEMCHECK_FLAGS ?= --trace-children=yes --track-fds=yes --track-origins=yes --lea
 FSANITIZE := -fsanitize=address
 COVERAGE :=-fprofile-arcs -ftest-coverage -lgcov
 
-HEADERS := memory.h bit_iterator.h node_iterator.h pointer_iterator.h pool_allocator.h reserving_allocator.h reverse_iterator.h
+HEADERS := bit_iterator.h node_iterator.h pointer_iterator.h pool_allocator.h reserving_allocator.h reverse_iterator.h
 SOURCES :=
 TEST_SOURCES := test_pool_allocator.cc test_reserving_allocator.cc
 
@@ -70,15 +70,8 @@ $(BUILD_DIR)/$(TEST_EXE): $(HEADERS_PATH) $(TEST_SOURCES_PATH)
 	@mkdir -p $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) $(TEST_SOURCES_PATH) $(TESTS_DIR)/main.cc $(LD_FLAGS) -o $(BUILD_DIR)/$(TEST_EXE)
 
-$(OBJ_DIR)/%.o: $(SOURCES_DIR)/$(NAMESPACE)/%.c
-	@mkdir -p  $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR)/$(NAMESPACE) -c $< -o $@
-
 memcheck: $(BUILD_DIR)/$(TEST_EXE)
 	$(MEMCHECK) $(MEMCHECK_FLAGS) ./$(BUILD_DIR)/$(TEST_EXE)
-
-coverage: $(BUILD_DIR)/$(TEST_EXE)
-	./$(TEST_EXE)
 
 clean:
 	rm -rf build coverage
