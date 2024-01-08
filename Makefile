@@ -39,7 +39,7 @@ MEMCHECK_FLAGS ?= --trace-children=yes --track-fds=yes --track-origins=yes --lea
 FSANITIZE := -fsanitize=address
 COVERAGE :=-fprofile-arcs -ftest-coverage -lgcov
 
-HEADERS := bit_iterator.h node_iterator.h pointer_iterator.h pool_allocator.h reserving_allocator.h reverse_iterator.h
+HEADERS := bit_iterator.h node_iterator.h pointer_iterator.h pool_allocator.h reverse_iterator.h
 SOURCES :=
 TEST_SOURCES := test_pool_allocator.cc test_reserving_allocator.cc
 
@@ -54,10 +54,10 @@ all:
 
 install:
 	@mkdir -p $(INSTALL_PREFIX)/include/$(NAMESPACE)
-	cp $(HEADERS_PATH) $(INSTALL_PREFIX)/include/$(NAMESPACE)/
+	$(foreach header, $(HEADERS), cp $(INCLUDE_DIR)/$(NAMESPACE)/$(header) $(INSTALL_PREFIX)/include/$(NAMESPACE)/$(header);)
 
 uninstall:
-	rm $(INSTALL_PREFIX)/include/sp/cstring.h
+	$(foreach header, $(HEADERS), rm $(INSTALL_PREFIX)/include/$(NAMESPACE)/$(header);)
 
 $(LIB_DIR)/lib$(LIBRARY).a: $(OBJ_DIR)/cstring.o
 	@mkdir -p  $(LIB_DIR)
