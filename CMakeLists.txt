@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.0...3.5)
 project(memory)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(HEADERS
   include/sp/bit_iterator.h
   include/sp/node_iterator.h
