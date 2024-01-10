@@ -24,7 +24,6 @@ class pool_allocator {
   using propagate_on_container_swap = std::true_type;
 
   constexpr explicit pool_allocator(size_type size) {
-    // TODO bitmask of allocated bytes
     if (size < 0) {
       throw std::invalid_argument("pool_allocator: negative pool size");
     }
