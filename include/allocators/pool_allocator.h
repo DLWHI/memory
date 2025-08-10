@@ -1,12 +1,12 @@
-#ifndef SP_MEMORY_POOL_ALLOCATOR_H_
-#define SP_MEMORY_POOL_ALLOCATOR_H_
+#ifndef MEMORY_ALLOCATORS_POOL_ALLOCATOR_H_
+#define MEMORY_ALLOCATORS_POOL_ALLOCATOR_H_
 #include <memory>
 #include <type_traits>
 #include <stdexcept>
 
-#include "bit_iterator.h"
+#include "../iterators/bit_iterator.h"
 
-namespace sp {
+namespace memory {
 // No general requirements on type T
 template <typename T>
 class pool_allocator {
@@ -17,20 +17,17 @@ class pool_allocator {
 
  public:
   using value_type = T;
-  using size_type = int64_t;
-  using difference_type = int64_t;
+  using size_type = std::size_t;
+  using difference_type = std::ptrdiff_t;
   using propagate_on_container_copy_assignment = std::false_type;
   using propagate_on_container_move_assignment = std::false_type;
   using propagate_on_container_swap = std::true_type;
 
-  constexpr explicit pool_allocator(size_type size) {
-    if (size < 0) {
-      throw std::invalid_argument("pool_allocator: negative pool size");
-    }
-    trace_ = new size_type[3 + (size + 8) / 8]{};
+  constexpr explicit pool_allocator(size_type size) 
+      : trace_(new size_type[3 + (size + 8) / 8]{}),
+        pool_(reinterpret_cast<byte_t*>(operator new(size))) {
     trace_[kLimitInd] = size;
     trace_[kRefInd] = 1;
-    pool_ = reinterpret_cast<byte_t*>(operator new(size));
   }
 
   template <typename U>
@@ -56,6 +53,10 @@ class pool_allocator {
 
   template <typename U>
   pool_allocator& operator=(pool_allocator<U>&&) = delete;
+
+  pool_allocator& operator=(const pool_allocator& other) = delete;
+
+  pool_allocator& operator=(pool_allocator&&) = delete;
 
   constexpr virtual ~pool_allocator() noexcept {
     --trace_[kRefInd];
@@ -146,5 +147,5 @@ template <typename T>
 void swap(pool_allocator<T>& lhs, pool_allocator<T>& rhs) noexcept {
   lhs.swap(rhs);
 }
-}  // namespace sp
-#endif  // SP_MEMORY_POOL_ALLOCATOR_H_
+}  // namespace memory
+#endif  // MEMORY_ALLOCATORS_POOL_ALLOCATOR_H_

@@ -1,14 +1,14 @@
-#ifndef SP_MEMORY_BIT_ITERATOR_H_
-#define SP_MEMORY_BIT_ITERATOR_H_
+#ifndef MEMORY_ITERATORS_BIT_ITERATOR_H_
+#define MEMORY_ITERATORS_BIT_ITERATOR_H_
 #include <cstdint>      // int64_t & uint8_t
 #include <iterator>     // std::bidirectional_iterator_tag
 
-namespace sp {
+namespace memory {
 class bit_iterator final {
  public:
   using iterator_category = std::bidirectional_iterator_tag;
   using byte_type = uint8_t;
-  using size_type = int64_t;
+  using size_type = std::size_t;
   using difference_type = int64_t;
 
   constexpr bit_iterator() noexcept : ptr_(nullptr), offs_(0), bit_(0){};
@@ -47,5 +47,5 @@ class bit_iterator final {
   size_type offs_;
   uint8_t bit_;
 };
-}  // namespace sp
-#endif  // SP_MEMORY_BIT_ITERATOR_H_
+}  // namespace memory
+#endif  // MEMORY_ITERATORS_BIT_ITERATOR_H_

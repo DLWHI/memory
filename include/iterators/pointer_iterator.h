@@ -1,17 +1,17 @@
-#ifndef SP_MEMORY_POINTER_ITERATOR_H_
-#define SP_MEMORY_POINTER_ITERATOR_H_
+#ifndef MEMORY_ITERATORS_POINTER_ITERATOR_H_
+#define MEMORY_ITERATORS_POINTER_ITERATOR_H_
 #include <cstdint>      // int64_t
 #include <iterator>     // std::random_access_iterator_tag
 #include <type_traits>  // std::is_same, std::remove_cv
 
-namespace sp {
+namespace memory {
 // Container - is not used inside of class, but allows different containers
 //             with same template type produce different iterators
 // If std::is_same<T, typename Container::value_type>::value evaluates to false
 // the program has undefined behavior
 // No general requirements on template types.
 template <typename T, typename Container>
-class pointer_iterator {
+class pointer_iterator final {
   static_assert(
       std::is_same<
           typename std::remove_cv<T>::type,
@@ -27,7 +27,6 @@ class pointer_iterator {
 
   constexpr pointer_iterator() noexcept : ptr_(nullptr){};
   constexpr explicit pointer_iterator(T* data) noexcept : ptr_(data){};
-  constexpr virtual ~pointer_iterator() = default;
 
   constexpr T* data() const noexcept { return ptr_; }
 
@@ -109,5 +108,5 @@ class pointer_iterator {
  protected:
   T* ptr_;
 };
-}  // namespace sp
-#endif  // SP_MEMORY_POINTER_ITERATOR_H_
+}  // namespace memory
+#endif  // MEMORY_ITERATORS_POINTER_ITERATOR_H_

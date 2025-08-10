@@ -1,14 +1,14 @@
-#ifndef SP_MEMORY_NODE_ITERATOR_H_
-#define SP_MEMORY_NODE_ITERATOR_H_
+#ifndef MEMORY_ITERATORS_NODE_ITERATOR_H_
+#define MEMORY_ITERATORS_NODE_ITERATOR_H_
 #include <iterator>
 #include <cstdint>
 
-namespace sp {
+namespace memory {
 
 // Container - is not used inside of class, but allows different containers
 //             with same template type produce different iterators
 template <typename T, typename Node, typename Container>
-class node_iterator {
+class node_iterator final {
  public:
   using iterator_category = std::bidirectional_iterator_tag;
   using node_type = T;
@@ -19,7 +19,6 @@ class node_iterator {
 
   constexpr node_iterator() noexcept : node_(nullptr){};
   constexpr explicit node_iterator(T* data) noexcept : node_(data){};
-  constexpr virtual ~node_iterator() = default;
 
   constexpr T* base() const noexcept { return node_; }
 
@@ -98,5 +97,5 @@ class node_iterator {
  protected:
   node_type* node_;
 };
-}  // namespace s21
-#endif  // SP_MEMORY_NODE_ITERATOR_H_
+}  // namespace memory
+#endif  // MEMORY_ITERATORS_NODE_ITERATOR_H_

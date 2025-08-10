@@ -1,11 +1,11 @@
-#ifndef SP_MEMORY_REVERSE_ITERATOR_H_
-#define SP_MEMORY_REVERSE_ITERATOR_H_
+#ifndef MEMORY_ITERATORS_REVERSE_ITERATOR_H_
+#define MEMORY_ITERATORS_REVERSE_ITERATOR_H_
 #include <cstdint>  // int64_t
 
-namespace sp {
+namespace memory {
 // BidIt satisfies BidirectionalIterator
 template <typename BidIt>
-class reverse_iterator {
+class reverse_iterator final {
  public:
   using iterator_category = typename BidIt::iterator_category;
   using value_type = typename BidIt::value_type;
@@ -14,7 +14,6 @@ class reverse_iterator {
   using difference_type = typename BidIt::difference_type;
 
   constexpr explicit reverse_iterator(const BidIt& it) : fwd_it_(it){};
-  constexpr virtual ~reverse_iterator() = default;
 
   constexpr pointer* base() const noexcept { return fwd_it_; }
 
@@ -91,5 +90,5 @@ class reverse_iterator {
  protected:
   BidIt fwd_it_;
 };
-}  // namespace sp
-#endif  // SP_MEMORY_REVERSE_ITERATOR_H_
+}  // namespace memory
+#endif  // MEMORY_ITERATORS_REVERSE_ITERATOR_H_
