@@ -5,15 +5,15 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(HEADERS
-  include/allocators/pool_allocator.h
-  include/containers/array.h
-  include/containers/vector.h
+  include/memory/allocators/pool_allocator.h
+  include/memory/containers/array.h
+  include/memory/containers/vector.h
   # include/sp/list.h
-  include/iterators/bit_iterator.h
-  include/iterators/node_iterator.h
-  include/iterators/pointer_iterator.h
-  include/iterators/reverse_iterator.h
-  include/iterators/reserving_allocator.h
+  include/memory/iterators/bit_iterator.h
+  include/memory/iterators/node_iterator.h
+  include/memory/iterators/pointer_iterator.h
+  include/memory/iterators/reverse_iterator.h
+  include/memory/iterators/reserving_allocator.h
 )
 
 set(TEST_SOURCES
@@ -21,6 +21,7 @@ set(TEST_SOURCES
     tests/allocators/test_pool_allocator.cc
     tests/containers/test_array.cc
     tests/containers/test_vector.cc
+    tests/iterators/test_bit_iterator.cc
 )
 
 set(CMAKE_MODULE_PATH 
@@ -33,8 +34,9 @@ include(EnableGoogleTest)
 include(SetPlatformFlags)
 include(CTest)
 
-install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/sp)
+install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/memory)
 
+include_directories(include)
 
 if (GTest_FOUND)
   add_executable(
@@ -42,7 +44,6 @@ if (GTest_FOUND)
       tests/main.cc
       ${TEST_SOURCES}
   )
-  target_include_directories(unit_tests PRIVATE include)
   target_link_libraries(
       unit_tests
       GTest::gtest_main
