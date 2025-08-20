@@ -6,8 +6,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "allocators/pool_allocator.h"
-#include "containers/vector.h"
+#include "memory/allocators/pool_allocator.h"
+#include "memory/containers/vector.h"
 #include "../test_helpers.h"
 
 static std::random_device ran_dev;
@@ -54,9 +54,7 @@ TEST(VectorTest, ctor_default) {
 TEST(VectorTest, ctor_size_alloc_not_default) {
   std::size_t size = uid(gen);
   memory::pool_allocator<not_safe> not_default(size * 3 / 2* sizeof(not_safe));
-  const memory::vector<not_safe, memory::pool_allocator<not_safe>> vec(size,
-                                                                 not_default);
-
+  const memory::vector<not_safe, memory::pool_allocator<not_safe>> vec(size, not_default);
   ASSERT_EQ(vec.size(), size);
   ASSERT_EQ(vec.capacity(), size);
   ASSERT_TRUE(vec.get_allocator() == not_default);
@@ -236,9 +234,9 @@ TEST(VectorTest, ctor_copy) {
 TEST(VectorTest, ctor_copy_alloc) {
   std::size_t size = 10;
   memory::pool_allocator<safe> al(size*sizeof(safe)*2);
-  const memory::vector<safe, memory::pool_allocator<safe>> vec1(
+  const std::vector<safe, memory::pool_allocator<safe>> vec1(
       size, safe("not default"), al);
-  const memory::vector<safe, memory::pool_allocator<safe>> vec2(vec1);
+  const std::vector<safe, memory::pool_allocator<safe>> vec2(vec1);
   ASSERT_EQ(vec1.size(), vec2.size());
   ASSERT_EQ(vec1.capacity(), vec2.capacity());
   ASSERT_NE(vec1.data(), vec2.data());
@@ -247,8 +245,7 @@ TEST(VectorTest, ctor_copy_alloc) {
   ASSERT_EQ(vec1.get_allocator(), vec2.get_allocator());
   ASSERT_EQ(al.remaining(), 0);
   ASSERT_EQ(vec2.front().birth, constructed::kCopy);
-  ASSERT_EQ(vec2.back().birth, constructed::kCopy);
-}
+  ASSERT_EQ(vec2.back().birth, constructed::kCopy);}
 
 TEST(VectorTest, ctor_copy_size_zero) {
   const memory::vector<safe> vec1(0);

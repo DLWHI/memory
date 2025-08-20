@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "iterators/bit_iterator.h"
+#include "memory/iterators/bit_iterator.h"
 
 static std::random_device ran_dev;
 static std::mt19937 gen(ran_dev());

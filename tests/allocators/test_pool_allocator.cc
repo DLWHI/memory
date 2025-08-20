@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "allocators/pool_allocator.h"
+#include "memory/allocators/pool_allocator.h"
 #include "../test_helpers.h"
 
 TEST(PoolAlloc, ctor) {
@@ -133,7 +133,8 @@ TEST(PoolAlloc, alloc_multiple) {
 
   for (int i = 0; i < size / alloc_size; ++i) {
     subject* ptr;
-    ASSERT_NO_THROW(ptr = al.allocate(alloc_size));
+    std::cout << ptr << ' ' << sizeof(subject) << std::endl;
+    ASSERT_NO_THROW(ptr = al.allocate(alloc_size)); 
     ASSERT_NE(ptr, nullptr);
     al.deallocate(ptr, alloc_size);
   }

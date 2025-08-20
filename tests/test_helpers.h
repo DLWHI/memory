@@ -94,10 +94,13 @@ class safe {
       : birth(constructed::kCopy), id_(other.id_), leak_(new int()) {}
   safe& operator=(const safe& other) {
     id_ = other.id_;
+    leak_ = new int();
     return *this;
   }
   safe& operator=(safe&& other) noexcept  {
     id_ = std::move(other.id_);
+    leak_ = other.leak_;
+    other.leak_ = nullptr;
     return *this;
   }
   virtual ~safe() { delete leak_; }

@@ -3,7 +3,7 @@
 #include <random>
 #include <sstream>
 
-#include "containers/array.h"
+#include "memory/containers/array.h"
 
 template <typename T, int64_t N>
 using TargetArray = memory::array<T, N>;
