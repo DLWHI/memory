@@ -10,8 +10,6 @@ namespace memory {
 // No general requirements on type T
 template <typename T>
 class pool_allocator {
-  using byte_type = uint8_t;
-  
   template <typename U>
   friend class pool_allocator;
 
@@ -19,8 +17,8 @@ class pool_allocator {
     std::size_t allocd;
     std::size_t limit;
     std::size_t ref_count;
-    byte_type* state;
-    byte_type* pool;
+    uint8_t* state;
+    uint8_t* pool;
   };
 
  public:
@@ -33,7 +31,7 @@ class pool_allocator {
 
   constexpr explicit pool_allocator(size_type size) 
       : trace_(alloc_trace(size)) {
-    trace_->state =  reinterpret_cast<byte_type*>(trace_ + 3*sizeof(std::size_t));
+    trace_->state =  reinterpret_cast<uint8_t*>(trace_ + 3*sizeof(std::size_t));
     trace_->pool = trace_->state + (size + 8)/8;
     trace_->allocd = 0;
     trace_->limit = size;
@@ -106,23 +104,23 @@ class pool_allocator {
         first = last;
       }
     }
+    std::cout << first.position() << ' ' << last.position() << std::endl;
     if (last.position() - first.position() < chunk_size) {
       throw std::bad_alloc();  // write own bad_alloc?
     }
     for (bit_iterator i = first; i != last; i.flip(), ++i) {}
     trace_->allocd += chunk_size;
-    std::cout << "allocd ptr " << trace_->pool + first.position() << "of size " << last.position() - first.position() << std::endl; 
     return reinterpret_cast<T*>(trace_->pool + first.position());
   }
 
-  constexpr void deallocate(T* pointer, size_type count) noexcept {
+  constexpr void deallocate(T* ptr, size_type count) noexcept {
     size_type chunk_size = count * sizeof(T);
-    byte_type* bptr = reinterpret_cast<byte_type*>(pointer);
+    uint8_t* bptr = reinterpret_cast<uint8_t*>(ptr);
     if (bptr - trace_->pool > trace_->limit) { return;}
     bit_iterator first(trace_->state, bptr - trace_->pool);
     for (size_type i = 0; i < chunk_size; first.flip(), ++first, ++i) {}
-    trace_->state -= chunk_size;
-    std::cout << "deallocd ptr: " << bptr << std::endl; 
+    std::cout << first.position() << ' ' << chunk_size << std::endl;  
+    trace_->allocd -= chunk_size;
    }
 
   constexpr bool operator==(const pool_allocator& other) const noexcept {
