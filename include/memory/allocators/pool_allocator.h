@@ -104,7 +104,6 @@ class pool_allocator {
         first = last;
       }
     }
-    std::cout << first.position() << ' ' << last.position() << std::endl;
     if (last.position() - first.position() < chunk_size) {
       throw std::bad_alloc();  // write own bad_alloc?
     }
