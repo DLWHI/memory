@@ -1,5 +1,6 @@
 #ifndef MEMORY_ALLOCATORS_POOL_ALLOCATOR_H_
 #define MEMORY_ALLOCATORS_POOL_ALLOCATOR_H_
+#include <cstring>
 #include <memory>
 #include <type_traits>
 #include <stdexcept>
@@ -118,7 +119,6 @@ class pool_allocator {
     if (bptr - trace_->pool > trace_->limit) { return;}
     bit_iterator first(trace_->state, bptr - trace_->pool);
     for (size_type i = 0; i < chunk_size; first.flip(), ++first, ++i) {}
-    std::cout << first.position() << ' ' << chunk_size << std::endl;  
     trace_->allocd -= chunk_size;
    }
 
@@ -133,7 +133,11 @@ class pool_allocator {
  private:
 
   trace_type* alloc_trace(std::size_t size) {
-    return (size) ? reinterpret_cast<trace_type*>(operator new(3*sizeof(std::size_t) + (size + 8)/8 + size)) : throw std::bad_alloc();
+    if (!size) throw std::bad_alloc();
+    std::size_t trace_size = 3 * sizeof(std::size_t) + (size + 8)/8 + size;
+    trace_type* ptr = reinterpret_cast<trace_type*>(operator new(trace_size));
+    std::memset(ptr, 0, trace_size);
+    return ptr;
   }
 
   trace_type* trace_;
