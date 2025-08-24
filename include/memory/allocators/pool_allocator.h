@@ -18,8 +18,6 @@ class pool_allocator {
     std::size_t allocd;
     std::size_t limit;
     std::size_t ref_count;
-    uint8_t* state;
-    uint8_t* pool;
   };
 
  public:
@@ -32,8 +30,7 @@ class pool_allocator {
 
   constexpr explicit pool_allocator(size_type size) 
       : trace_(alloc_trace(size)) {
-    trace_->state =  reinterpret_cast<uint8_t*>(trace_ + 3*sizeof(std::size_t));
-    trace_->pool = trace_->state + (size + 8)/8;
+    pool_ = state() + (size + 7)/8;
     trace_->allocd = 0;
     trace_->limit = size;
     trace_->ref_count = 1;
@@ -41,7 +38,7 @@ class pool_allocator {
 
   template <typename U>
   constexpr pool_allocator(const pool_allocator<U>& other) noexcept
-      : trace_(reinterpret_cast<trace_type*>(other.trace_)) {
+      : pool_(other.pool_), trace_(reinterpret_cast<trace_type*>(other.trace_)) {
     ++trace_->ref_count;
   }
 
@@ -50,7 +47,7 @@ class pool_allocator {
       : pool_allocator(other) {} 
 
   constexpr pool_allocator(const pool_allocator& other) noexcept
-      : trace_(reinterpret_cast<trace_type*>(other.trace_)) {
+      : pool_(other.pool_), trace_(reinterpret_cast<trace_type*>(other.trace_)) {
     ++trace_->ref_count;
   }
 
@@ -97,12 +94,12 @@ class pool_allocator {
 
   constexpr T* allocate(size_type count) {
     size_type chunk_size = count * sizeof(T);
-    bit_iterator first(trace_->state);
+    bit_iterator first(state());
     bit_iterator last = first;
-    bit_iterator end(trace_->state, trace_->limit);
+    bit_iterator end(state(), trace_->limit);
     for (; last != end && last.position() - first.position() < chunk_size; ++last) {
       if (*last) {
-        first = last;
+        ++first;
       }
     }
     if (last.position() - first.position() < chunk_size) {
@@ -110,14 +107,14 @@ class pool_allocator {
     }
     for (bit_iterator i = first; i != last; i.flip(), ++i) {}
     trace_->allocd += chunk_size;
-    return reinterpret_cast<T*>(trace_->pool + first.position());
+    return reinterpret_cast<T*>(pool_ + first.position());
   }
 
   constexpr void deallocate(T* ptr, size_type count) noexcept {
     size_type chunk_size = count * sizeof(T);
-    uint8_t* bptr = reinterpret_cast<uint8_t*>(ptr);
-    if (bptr - trace_->pool > trace_->limit) { return;}
-    bit_iterator first(trace_->state, bptr - trace_->pool);
+    int64_t offs = reinterpret_cast<uint8_t*>(ptr) - pool_;
+    if (offs > trace_->limit) { return;}
+    bit_iterator first(state(), offs);
     for (size_type i = 0; i < chunk_size; first.flip(), ++first, ++i) {}
     trace_->allocd -= chunk_size;
    }
@@ -131,15 +128,20 @@ class pool_allocator {
   }
 
  private:
+  constexpr uint8_t* state() noexcept {
+    return reinterpret_cast<uint8_t*>(trace_ + 1);
+  }
 
   trace_type* alloc_trace(std::size_t size) {
     if (!size) throw std::bad_alloc();
-    std::size_t trace_size = 3 * sizeof(std::size_t) + (size + 8)/8 + size;
+    std::size_t trace_size = sizeof(trace_type) + (size + 7)/8 + size;
+    std::cout << "system alloc of " << trace_size << " bytes" << std::endl;
     trace_type* ptr = reinterpret_cast<trace_type*>(operator new(trace_size));
     std::memset(ptr, 0, trace_size);
     return ptr;
   }
 
+  uint8_t* pool_;
   trace_type* trace_;
 };
 
