@@ -114,13 +114,13 @@ class vector {
   constexpr vector(vector&& other, const Allocator& al)
       noexcept(std::allocator_traits<Allocator>::is_always_equal::value)
       : vector(al) {
-    // if (al == other.al_) {
-    //   swap(other);
-    // } else {
-    //   ptr_ = alloc(other.size_);
-    //   move_from(ptr_, other.ptr_, other.size_);
-    //   size_ = other.size_;
-    // }
+    if (al == other.al_) {
+      swap(other);
+    } else {
+      ptr_ = alloc(other.size_);
+      move(ptr_, other.ptr_, other.ptr_ + other.size_);
+      size_ = other.size_;
+    }
   }
 
   // T must meet additional requirements of
@@ -562,12 +562,14 @@ class vector {
         std::allocator_traits<Allocator>::propagate_on_container_swap::value ||
         std::allocator_traits<Allocator>::is_always_equal::value
       ) {
-    // if constexpr (al_traits::propagate_on_container_swap::value) {
-    //   using std::swap;
-    //   swap(al_, other.al_);
-    // }
-    // buf_.swap(other.buf_);
-    // std::swap(size_, other.size_);
+    if (ptr_ == other.ptr_) return;
+    if constexpr (std::allocator_traits<Allocator>::propagate_on_container_swap::value) {
+       using std::swap;
+       swap(al_, other.al_);
+    }
+    std::swap(ptr_, other.ptr_);
+    std::swap(size_, other.size_);
+    std::swap(cap_, other.cap_);
   }
 
   // T must meet additional requirements of EqualityComparable
@@ -632,22 +634,17 @@ class vector {
   }
 
   template <typename InIt>
-  constexpr void fill(pointer dst, InIt first, InIt last)
+  constexpr void fill(pointer dest, InIt first, InIt last)
       noexcept(std::is_nothrow_copy_constructible<T>::value) {
     size_type count = std::distance(first, last);
-    std::cout << count << std::endl;
     size_type i = 0;
     try {
       for (; i < count; ++i, ++first) {
-        std::allocator_traits<Allocator>::construct(
-          al_,
-          dst + i,
-          *first
-        );
+        std::allocator_traits<Allocator>::construct(al_, dest + i, *first);
       }
     } catch (...) {
       for (; i; --i) {
-        std::allocator_traits<Allocator>::destroy(al_, dst + i - 1);
+        std::allocator_traits<Allocator>::destroy(al_, dest + i - 1);
       }
       if constexpr (!std::is_nothrow_copy_constructible<T>::value) throw;
     }
@@ -672,21 +669,20 @@ class vector {
     // }
   }
 
-  constexpr void move_from(
-      pointer dest, pointer source,
-      size_type count) noexcept(std::is_nothrow_move_constructible<T>::value) {
-    // size_type i = 0;
-    // if constexpr (std::is_nothrow_move_constructible<T>::value) {
-    //   for (; i < count; ++i)
-    //     al_traits::construct(al_, dest + i, std::move(source[i]));
-    // } else {
-    //   try {
-    //     for (; i < count; ++i) al_traits::construct(al_, dest + i, source[i]);
-    //   } catch (...) {
-    //     for (; i; --i) al_traits::destroy(al_, dest + i - 1);
-    //     throw;
-    //   }
-    // }
+  template <typename InIt>
+  constexpr void move(pointer dest, InIt first, InIt last) noexcept(std::is_nothrow_move_constructible<T>::value) {
+    size_type count = std::distance(first, last);
+    size_type i =0;
+    try {
+      for (; i < count; ++i, ++first) {
+        std::allocator_traits<Allocator>::construct(al_, dest + i, std::move(*first));
+      }
+    } catch (...) {
+      for (; i; --i) {
+        std::allocator_traits<Allocator>::destroy(al_, dest + i - 1);
+      }
+      if constexpr (!std::is_nothrow_move_constructible<T>::value)  throw;
+    }    
   }
 
   constexpr void resize_buffer(size_type n_size) {

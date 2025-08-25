@@ -69,8 +69,7 @@ TEST(VectorTest, ctor_size_bad_alloc) {
   memory::pool_allocator<not_safe> not_default(size);
 
   try {
-    const memory::vector<not_safe, memory::pool_allocator<not_safe>> vec(size * 2,
-                                                                   not_default);
+    const memory::vector<not_safe, memory::pool_allocator<not_safe>> vec(size * 2, not_default);
     FAIL();
   } catch (std::bad_alloc &) {
   }
@@ -234,9 +233,9 @@ TEST(VectorTest, ctor_copy) {
 TEST(VectorTest, ctor_copy_alloc) {
   std::size_t size = 10;
   memory::pool_allocator<safe> al(size*sizeof(safe)*2);
-  const std::vector<safe, memory::pool_allocator<safe>> vec1(
+  const memory::vector<safe, memory::pool_allocator<safe>> vec1(
       size, safe("not default"), al);
-  const std::vector<safe, memory::pool_allocator<safe>> vec2(vec1);
+  const memory::vector<safe, memory::pool_allocator<safe>> vec2(vec1);
   ASSERT_EQ(vec1.size(), vec2.size());
   ASSERT_EQ(vec1.capacity(), vec2.capacity());
   ASSERT_NE(vec1.data(), vec2.data());
