@@ -119,36 +119,35 @@ class vector {
     } else {
       ptr_ = alloc(other.size_);
       move(ptr_, other.ptr_, other.ptr_ + other.size_);
-      size_ = other.size_;
+      cap_ = size_ = other.size_;
     }
   }
 
   // T must meet additional requirements of
   //  CopyInsertable and CopyAssignable into *this
   constexpr vector& operator=(const vector& other) {
-    // if constexpr (al_traits::propagate_on_container_copy_assignment::value) {
-    //   pointer_buffer temp(&al_);
-    //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
-    //   size_ = 0;
-    //   al_ = other.al_;
-    // }
-    // if (other.size_ > buf_.cap || !std::is_nothrow_copy_assignable<T>::value) {
-    //   pointer_buffer temp(other.buf_.cap, &al_, ptr_);
-    //   assign(temp.ptr, other.ptr_, other.ptr_ + other.size_);
-    //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
-    // } else if constexpr (std::is_nothrow_copy_assignable<T>::value) {
-    //   if (size_ < other.size_) {
-    //     assign(ptr_ + size_, other.ptr_ + size_, other.ptr_ + other.size_);
-    //   } else {
-    //     destroy_content(ptr_ + other.size_, size_ - other.size_);
-    //   }
-    //   for (size_type i = 0; i < other.size_ && i < size_; ++i) {
-    //     ptr_[i] = other.ptr_[i];
-    //   }
-    // }
-    // size_ = other.size_;
+    if constexpr (std::allocator_traits<Allocator>::propagate_on_container_copy_assignment::value) {
+      // pointer ptr = other.alloc(other.size_);
+      // other.fill(ptr, other.ptr_, other.ptr_ + other.size_)
+      
+    }
+    pointer ptr = ptr_;
+    if (cap_ < other.size_) {
+      try {
+        ptr = alloc(other.size_);
+        fill(ptr, other.ptr_, other.ptr_ + other.size_);
+      } catch (...) {
+        if (ptr != ptr_) {
+          dealloc(ptr, other.size_);
+        }
+        throw;
+      }
+    } else {
+      destroy(ptr_ + other.size_, size_ - other.size_);
+      assign(ptr, other.ptr_, other.ptr_ + size_);      
+    }
+    size_ = other.size_;
+    swap_out_buffer(ptr, other.size_); 
     return *this;
   }
 
@@ -180,7 +179,10 @@ class vector {
   }
 
   // No additional requirements on template types
-  constexpr virtual ~vector() noexcept { clear(); }
+  constexpr virtual ~vector() noexcept { 
+    clear(); 
+    dealloc(ptr_, cap_);
+  }
 
   //============================================================================
   // No additional requirements on template types for all methods below
@@ -658,15 +660,15 @@ class vector {
   }
 
   template <typename InIt>
-  constexpr void assign(pointer arr, InIt first, InIt last) noexcept(
-      std::is_nothrow_copy_constructible<T>::value) {
-    // InIt i = first;
-    // try {
-    //   for (; i != last; ++i, ++arr) al_traits::construct(al_, arr, *i);
-    // } catch (...) {
-    //   for (; i != first; --i) al_traits::destroy(al_, --arr);
-    //   if constexpr (!std::is_nothrow_copy_constructible<T>::value) throw;
-    // }
+  constexpr void assign(pointer arr, InIt first, InIt last) noexcept(std::is_nothrow_copy_assignable<T>::value) {
+    int i = 0;
+    for (; first != last; ++first, ++arr, ++i) {
+      if constexpr (std::is_nothrow_copy_assignable<T>::value && !std::is_const<typename std::iterator_traits<InIt>::value_type>::value) {
+        *arr = std::move(*first);
+      } else {
+        *arr = *first;
+      }
+    }
   }
 
   template <typename InIt>
@@ -685,11 +687,13 @@ class vector {
     }    
   }
 
-  constexpr void resize_buffer(size_type n_size) {
-    // pointer_buffer temp(n_size, &al_);
-    // move_from(temp.ptr, ptr_, size_);
-    // buf_.swap(temp);
-    // destroy_content(temp.ptr, size_);
+  constexpr void swap_out_buffer(pointer new_buf, size_type size) {
+    if (new_buf == ptr_) {
+      return;
+    }
+    std::swap(new_buf, ptr_);
+    std::swap(size, cap_);
+    dealloc(new_buf, size);
   }
 
   template <typename... Args>

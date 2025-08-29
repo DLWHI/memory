@@ -135,7 +135,6 @@ class pool_allocator {
   trace_type* alloc_trace(std::size_t size) {
     if (!size) throw std::bad_alloc();
     std::size_t trace_size = sizeof(trace_type) + (size + 7)/8 + size;
-    std::cout << "system alloc of " << trace_size << " bytes" << std::endl;
     trace_type* ptr = reinterpret_cast<trace_type*>(operator new(trace_size));
     std::memset(ptr, 0, trace_size);
     return ptr;
