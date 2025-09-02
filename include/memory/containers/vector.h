@@ -89,7 +89,7 @@ class vector {
   }
 
   // T must meet additional requirements of EmplaceConstructible
-  constexpr vector(std::initializer_list<value_type> values,
+  constexpr vector(std::initializer_list<T>  values,
                    const Allocator& al = Allocator())
       : vector(values.begin(), values.end(), al) {}
   
@@ -136,16 +136,16 @@ class vector {
       return *this;
     }
     if constexpr (std::allocator_traits<Allocator>::propagate_on_container_copy_assignment::value) {
-      pointer ptr = ptr_;
+      pointer p = ptr_;
       if (al_ != other.al_) {
-        ptr = other.alloc(other.size_);
+        p = other.alloc(other.size_);
         try {
-          other.fill(ptr, other.ptr_, other.ptr_ + other.size_);
+          other.fill(p,  other.ptr_, other.ptr_ + other.size_);
         } catch(...) {
-          other.dealloc(ptr, other.size_);
+          other.dealloc(p,  other.size_);
           throw;
         }
-        swap_out_buffer(ptr, other.size);
+        swap_out_buffer(p,  other.size);
         al_ = other.al_;
       }
     } else {
@@ -176,7 +176,7 @@ class vector {
     return *this;   
   }
   
-  constexpr vector& operator=(std::initializer_list<value_type> ilist) {
+  constexpr vector& operator=(std::initializer_list<T>  ilist) {
     assign(ilist.begin(), ilist.end());
     return *this;   
   }
@@ -296,17 +296,28 @@ class vector {
   }
 
   // Same as assign(values.begin(), values.end())
-  constexpr void assign(std::initializer_list<value_type> values) {
+  constexpr void assign(std::initializer_list<T>  values) {
     return assign(values.begin(), values.end());
   }
 
   // T must meet additional requirements of MoveInsertable into *this
   constexpr void reserve(size_type count) {
-    // if (count > max_size() || count < 0) {
-    //   throw std::length_error("Invalid reserve MEMORYace");
-    // } else if (count > buf_.cap) {
-    //   resize_buffer(count);
-    // }
+    if (count > max_size()) {
+      throw std::length_error("Cannot reserve space more than max_size()");
+    } else if (count > cap_) {
+      pointer p = alloc(count);
+      if constexpr (std::is_nothrow_move_constructible<T>::value) {
+        move(p, ptr_, ptr_ + size_);
+      } else {
+        try {
+          fill(p, ptr_, ptr_ + size_);
+        } catch(...) {
+          dealloc(p, count);
+          throw;
+        }
+      }
+      swap_out_buffer(p, count);
+    }
   }
 
   // T must meet additional requirements of MoveInsertable into *this
@@ -331,15 +342,15 @@ class vector {
     //   return;
     // } else if (count >= buf_.cap) {
     //   pointer_buffer temp(count, &al_, ptr_);
-    //   move_from(temp.ptr, ptr_, size_);
+    //   move_from(temp.p,  ptr_, size_);
     //   try {
-    //     fill(temp.ptr + size_, count - size_);
+    //     fill(temp.p + size_, count - size_);
     //   } catch (...) {
-    //     destroy_content(temp.ptr, size_);
+    //     destroy_content(temp.p,  size_);
     //     throw;
     //   }
     //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
+    //   destroy_content(temp.p,  size_);
     //   size_ = count;
     // } else {
     //   move_end(count - size_);
@@ -355,15 +366,15 @@ class vector {
     //   return;
     // } else if (count >= buf_.cap) {
     //   pointer_buffer temp(count, &al_, ptr_);
-    //   move_from(temp.ptr, ptr_, size_);
+    //   move_from(temp.p,  ptr_, size_);
     //   try {
-    //     fill(temp.ptr + size_, count - size_, value);
+    //     fill(temp.p + size_, count - size_, value);
     //   } catch (...) {
-    //     destroy_content(temp.ptr, size_);
+    //     destroy_content(temp.p,  size_);
     //     throw;
     //   }
     //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
+    //   destroy_content(temp.p,  size_);
     //   size_ = count;
     // } else {
     //   move_end(count - size_, value);
@@ -376,7 +387,7 @@ class vector {
 
   // T must meet additional requirements of MoveInsertable
   constexpr void push_back(value_type&& value) {
-    emplace_back(std::forward<value_type>(value));
+    emplace_back(std::forward<T> (value));
   }
 
   // No additional requirements on template types
@@ -394,7 +405,7 @@ class vector {
   // T must meet additional requirements of MoveAssignable
   //   and MoveInsertable into *this
   constexpr iterator insert(const_iterator pos, value_type&& value) {
-    return emplace(pos, std::forward<value_type>(value));
+    return emplace(pos, std::forward<T> (value));
   }
 
   // T must meet additional requirements of CopyAssignable
@@ -405,15 +416,15 @@ class vector {
     // if (size_ + count >= buf_.cap || !std::is_nothrow_swappable<T>::value) {
     //   pointer_buffer temp(std::max(kCapMul * buf_.cap, size_ + count), &al_,
     //                       ptr_);
-    //   fill(temp.ptr, count, value);
+    //   fill(temp.p,  count, value);
     //   try {
-    //     split_buffer(temp.ptr, ind, count);
+    //     split_buffer(temp.p,  ind, count);
     //   } catch (...) {
-    //     destroy_content(temp.ptr, count);
+    //     destroy_content(temp.p,  count);
     //     throw;
     //   }
     //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
+    //   destroy_content(temp.p,  size_);
     // } else if constexpr (std::is_nothrow_swappable<T>::value) {
     //   fill(ptr_ + size_, count, value);
     //   std::reverse(ptr_, ptr_ + size_ + count);
@@ -433,15 +444,15 @@ class vector {
     // if (count + size_ >= buf_.cap || !std::is_nothrow_swappable<T>::value) {
     //   pointer_buffer temp(std::max(kCapMul * buf_.cap, size_ + count), &al_,
     //                       ptr_);
-    //   assign(temp.ptr, first, last);
+    //   assign(temp.p,  first, last);
     //   try {
-    //     split_buffer(temp.ptr, ind, count);
+    //     split_buffer(temp.p,  ind, count);
     //   } catch (...) {
-    //     destroy_content(temp.ptr, count);
+    //     destroy_content(temp.p,  count);
     //     throw;
     //   }
     //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
+    //   destroy_content(temp.p,  size_);
     // } else if constexpr (std::is_nothrow_swappable<T>::value) {
     //   assign(ptr_ + size_, first, last);
     //   std::reverse(ptr_, ptr_ + size_ + count);
@@ -469,9 +480,9 @@ class vector {
     //   al_traits::destroy(al_, ptr_ + size_ - 1);
     // } else {
     //   pointer_buffer temp(buf_.cap, &al_, ptr_);
-    //   split_buffer(temp.ptr, ind + 1, -1);
+    //   split_buffer(temp.p,  ind + 1, -1);
     //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
+    //   destroy_content(temp.p,  size_);
     // }
     // --size_;
     return begin();
@@ -490,9 +501,9 @@ class vector {
     //   destroy_content(ptr_ + size_ - count, count);
     // } else {
     //   pointer_buffer temp(buf_.cap, &al_, ptr_);
-    //   split_buffer(temp.ptr, finish, -count);
+    //   split_buffer(temp.p,  finish, -count);
     //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
+    //   destroy_content(temp.p,  size_);
     // }
     // size_ -= count;
     return begin();
@@ -506,15 +517,15 @@ class vector {
     // if (size_ == buf_.cap || !std::is_nothrow_move_assignable<T>::value) {
     //   pointer_buffer temp(std::max(kCapMul * buf_.cap, size_type(1)), &al_,
     //                       ptr_);
-    //   al_traits::construct(al_, temp.ptr, std::forward<Args>(args)...);
+    //   al_traits::construct(al_, temp.p,  std::forward<Args>(args)...);
     //   try {
-    //     split_buffer(temp.ptr, ind, 1);
+    //     split_buffer(temp.p,  ind, 1);
     //   } catch (...) {
     //     al_traits::destroy(al_, temp.ptr);
     //     throw;
     //   }
     //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
+    //   destroy_content(temp.p,  size_);
     // } else if constexpr (std::is_nothrow_move_assignable<T>::value) {
     //   T emp(std::forward<Args>(args)...);
     //   al_traits::construct(al_, ptr_ + size_,
@@ -535,15 +546,15 @@ class vector {
     // if (size_ >= buf_.cap) {
     //   pointer_buffer temp(std::max(kCapMul * buf_.cap, size_type(1)), &al_,
     //                       ptr_);
-    //   al_traits::construct(al_, temp.ptr + size_, std::forward<Args>(args)...);
+    //   al_traits::construct(al_, temp.p + size_, std::forward<Args>(args)...);
     //   try {
-    //     move_from(temp.ptr, ptr_, size_);
+    //     move_from(temp.p,  ptr_, size_);
     //   } catch (...) {
-    //     al_traits::destroy(al_, temp.ptr + size_);
+    //     al_traits::destroy(al_, temp.p + size_);
     //     throw;
     //   }
     //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
+    //   destroy_content(temp.p,  size_);
     // } else {
     //   al_traits::construct(al_, ptr_ + size_, std::forward<Args>(args)...);
     // }
@@ -606,8 +617,8 @@ class vector {
       nullptr;
   }
 
-  constexpr void dealloc(pointer ptr, size_type count) {
-    std::allocator_traits<Allocator>::deallocate(al_, ptr, count);
+  constexpr void dealloc(pointer p,  size_type count) {
+    std::allocator_traits<Allocator>::deallocate(al_, p,  count);
   }
 
   template <typename... Args>
@@ -663,10 +674,10 @@ class vector {
     }    
   }
 
-  constexpr void destroy(pointer ptr, size_type count)
+  constexpr void destroy(pointer p, size_type count)
       noexcept(std::is_nothrow_destructible<T>::value) {
     for (; count; --count) {
-      std::allocator_traits<Allocator>::destroy(al_, ptr + count - 1);
+      std::allocator_traits<Allocator>::destroy(al_, p + count - 1);
     }
   }
 
