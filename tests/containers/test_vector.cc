@@ -425,8 +425,7 @@ TEST(VectorTest, ctor_move_throwing_alloc_not_default) {
   memory::pool_allocator<throwing> al2(size*sizeof(throwing));
   memory::vector<throwing, memory::pool_allocator<throwing>> vec1(size, al1);
   try {
-    memory::vector<throwing, memory::pool_allocator<throwing>> vec2(std::move(vec1),
-                                                              al2);
+    memory::vector<throwing, memory::pool_allocator<throwing>> vec2(std::move(vec1), al2);
     FAIL();
   } catch (...) {
   }

@@ -119,7 +119,12 @@ class vector {
       swap(other);
     } else {
       ptr_ = alloc(other.size_);
-      move(ptr_, other.ptr_, other.ptr_ + other.size_);
+      try {
+        move(ptr_, other.ptr_, other.ptr_ + other.size_);
+      } catch(...) {
+        dealloc(ptr_, other.size_);
+        if constexpr (!std::allocator_traits<Allocator>::is_always_equal::value) throw;
+      }
       cap_ = size_ = other.size_;
     }
   }
@@ -134,7 +139,12 @@ class vector {
       pointer ptr = ptr_;
       if (al_ != other.al_) {
         ptr = other.alloc(other.size_);
-        other.fill(ptr, other.ptr_, other.ptr_ + other.size_);
+        try {
+          other.fill(ptr, other.ptr_, other.ptr_ + other.size_);
+        } catch(...) {
+          other.dealloc(ptr, other.size_);
+          throw;
+        }
         swap_out_buffer(ptr, other.size);
         al_ = other.al_;
       }
