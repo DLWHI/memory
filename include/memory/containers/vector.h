@@ -11,6 +11,8 @@
 #include <utility>      // std::forward, std::swap, std::move
 
 namespace memory {
+// use it at your own risk
+//
 // T type must meet requirements of Erasable
 // Allocator type must meet requirements of Allocator
 // Methods may have additional reuirements on types
@@ -126,28 +128,20 @@ class vector {
   // T must meet additional requirements of
   //  CopyInsertable and CopyAssignable into *this
   constexpr vector& operator=(const vector& other) {
-    if constexpr (std::allocator_traits<Allocator>::propagate_on_container_copy_assignment::value) {
-      // pointer ptr = other.alloc(other.size_);
-      // other.fill(ptr, other.ptr_, other.ptr_ + other.size_)
-      
+    if (ptr_ == other.ptr_) {
+      return *this;
     }
-    pointer ptr = ptr_;
-    if (cap_ < other.size_) {
-      try {
-        ptr = alloc(other.size_);
-        fill(ptr, other.ptr_, other.ptr_ + other.size_);
-      } catch (...) {
-        if (ptr != ptr_) {
-          dealloc(ptr, other.size_);
-        }
-        throw;
+    if constexpr (std::allocator_traits<Allocator>::propagate_on_container_copy_assignment::value) {
+      pointer ptr = ptr_;
+      if (al_ != other.al_) {
+        ptr = other.alloc(other.size_);
+        other.fill(ptr, other.ptr_, other.ptr_ + other.size_);
+        swap_out_buffer(ptr, other.size);
+        al_ = other.al_;
       }
     } else {
-      destroy(ptr_ + other.size_, size_ - other.size_);
-      assign(ptr, other.ptr_, other.ptr_ + size_);      
+      copy_assign(other.size_, other.ptr_, other.ptr_ + other.size_);      
     }
-    size_ = other.size_;
-    swap_out_buffer(ptr, other.size_); 
     return *this;
   }
 
@@ -158,24 +152,19 @@ class vector {
   constexpr vector& operator=(vector&& other) noexcept(
       std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value ||
       std::allocator_traits<Allocator>::is_always_equal::value) {
-    // if constexpr (al_traits::propagate_on_container_move_assignment::value) {
-    //   al_ = std::move(other.al_);
-    // }
-    // if (other.size_ > buf_.cap || !std::is_nothrow_move_assignable<T>::value) {
-    //   pointer_buffer temp(other.buf_.cap, &al_, ptr_);
-    //   move_from(temp.ptr, other.ptr_, other.size_);
-    //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
-    // } else if constexpr (std::is_nothrow_move_assignable<T>::value) {
-    //   move_from(ptr_ + size_, other.ptr_ + other.size_,
-    //             other.size_ - size_);
-    //   destroy_content(ptr_ + other.size_, size_ - other.size_);
-    //   for (size_type i = 0; i < other.size_ && i < size_; ++i) {
-    //     ptr_[i] = std::move(other.ptr_[i]);
-    //   }
-    // }
-    // size_ = other.size_;
-    return *this;
+    if (ptr_ == other.ptr_) {
+      return *this;
+    }
+    if constexpr (std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value || std::allocator_traits<Allocator>::is_always_equal::value) {
+      swap(other);
+    } else {
+      if (al_ != other.al_) {
+        move_assign(other.size_, other.ptr_, other.ptr_ + other.size_);      
+      } else {
+        swap(other); 
+      }
+    }
+    return *this;   
   }
 
   // No additional requirements on template types
@@ -280,26 +269,11 @@ class vector {
   //  and MoveInsertable if InputIterator does not satisfy ForwardIterator
   template <typename InputIterator>
   constexpr void assign(InputIterator first, InputIterator last) {
-    // size_type count = std::distance(first, last);
-    // if (count > max_size() || count < 0) {
-    //   throw std::length_error("Invalid or too big range provided");
-    // }
-    // if (count > buf_.cap) {
-    //   pointer_buffer temp(std::max(kCapMul * buf_.cap, count), &al_, ptr_);
-    //   assign(temp.ptr, first, last);
-    //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
-    // } else {
-    //   for (size_type i = 0; i < count && i < size_; ++i, ++first) {
-    //     ptr_[i] = *first;
-    //   }
-    //   if (first != last) {
-    //     assign(ptr_ + size_, first, last);
-    //   } else {
-    //     destroy_content(ptr_ + count, size_ - count);
-    //   }
-    // }
-    // size_ = count;
+    size_type count = std::distance(first, last);
+    if (count > max_size()) {
+      throw std::length_error("Too big range provided");
+    }
+    copy_assign(count, first, last);
   }
 
   // Same as assign(values.begin(), values.end())
@@ -564,7 +538,9 @@ class vector {
         std::allocator_traits<Allocator>::propagate_on_container_swap::value ||
         std::allocator_traits<Allocator>::is_always_equal::value
       ) {
-    if (ptr_ == other.ptr_) return;
+    if (ptr_ == other.ptr_) {
+      return;
+    }
     if constexpr (std::allocator_traits<Allocator>::propagate_on_container_swap::value) {
        using std::swap;
        swap(al_, other.al_);
@@ -652,25 +628,6 @@ class vector {
     }
   }
 
-  constexpr void destroy(pointer ptr, size_type count)
-      noexcept(std::is_nothrow_destructible<T>::value) {
-    for (; count; --count) {
-      std::allocator_traits<Allocator>::destroy(al_, ptr + count - 1);
-    }
-  }
-
-  template <typename InIt>
-  constexpr void assign(pointer arr, InIt first, InIt last) noexcept(std::is_nothrow_copy_assignable<T>::value) {
-    int i = 0;
-    for (; first != last; ++first, ++arr, ++i) {
-      if constexpr (std::is_nothrow_copy_assignable<T>::value && !std::is_const<typename std::iterator_traits<InIt>::value_type>::value) {
-        *arr = std::move(*first);
-      } else {
-        *arr = *first;
-      }
-    }
-  }
-
   template <typename InIt>
   constexpr void move(pointer dest, InIt first, InIt last) noexcept(std::is_nothrow_move_constructible<T>::value) {
     size_type count = std::distance(first, last);
@@ -687,12 +644,76 @@ class vector {
     }    
   }
 
+  constexpr void destroy(pointer ptr, size_type count)
+      noexcept(std::is_nothrow_destructible<T>::value) {
+    for (; count; --count) {
+      std::allocator_traits<Allocator>::destroy(al_, ptr + count - 1);
+    }
+  }
+
+  template <typename InIt>
+  constexpr void copy_assign(size_type count, InIt first, InIt last) {
+    pointer p = ptr_;
+    if (cap_ < count) {
+      p = create_buffer<InIt, false>(count, first, last);
+      swap_out_buffer(p, count);
+    } else {
+      pointer end = ptr_ + size_;
+      for (; p != end && first != last; ++first, ++p) {
+        *p = *first;
+      }
+      if (p != end) {
+        destroy(p, end - p);
+      } else if (first != last) {
+        fill(p, first, last);
+      }
+    }
+    size_ = count;
+  }
+
+  template <typename InIt>
+  constexpr void move_assign(size_type count, InIt first, InIt last) {
+    pointer p = ptr_;
+    if (cap_ < count) {
+      p = create_buffer<InIt, true>(count, first, last);
+      swap_out_buffer(p, count);
+    } else {
+      pointer end = ptr_ + size_;
+      for (; p != end && first != last; ++first, ++p) {
+        *p = std::move(*first);
+      }
+      if (p != end) {
+        destroy(p, end - p);
+      } else if (first != last) {
+        move(p, first, last);
+      }
+    }
+    size_ = count;
+  }
+
+  template <typename InIt, bool kMove = false>
+  constexpr pointer create_buffer(size_type size, InIt first, InIt last) {
+    pointer p = alloc(size);
+    try {
+      if constexpr (kMove) {
+        move(p, first, last);
+      } else {
+        fill(p, first, last);
+      }
+    } catch(...) {
+      dealloc(p, size);
+      throw;
+    }
+    return p;
+  } 
+
   constexpr void swap_out_buffer(pointer new_buf, size_type size) {
     if (new_buf == ptr_) {
       return;
     }
     std::swap(new_buf, ptr_);
     std::swap(size, cap_);
+    destroy(new_buf, size);
     dealloc(new_buf, size);
   }
 

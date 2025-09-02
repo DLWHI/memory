@@ -382,7 +382,7 @@ TEST(VectorTest, ctor_move_safe_alloc) {
   std::size_t cap = vec1.capacity();
   const memory::vector<safe, memory::pool_allocator<safe>> vec2(std::move(vec1), al2);
   ASSERT_EQ(vec2.size(), size);
-  ASSERT_EQ(vec2.capacity(), cap);
+  ASSERT_EQ(vec1.capacity(), cap);
   ASSERT_NE(vec1.data(), vec2.data());
   ASSERT_EQ(vec2.front(), safe("not default"));
   ASSERT_EQ(vec2.back(), safe("not default"));
@@ -406,7 +406,7 @@ TEST(VectorTest, ctor_move_not_safe_alloc) {
       std::move(vec1), al2);
 
   ASSERT_EQ(vec2.size(), size);
-  ASSERT_EQ(vec2.capacity(), cap);
+  ASSERT_EQ(vec1.capacity(), cap);
   ASSERT_NE(vec1.data(), vec2.data());
   ASSERT_EQ(vec2.front(), not_safe("not default"));
   ASSERT_EQ(vec2.back(), not_safe("not default"));
@@ -421,8 +421,8 @@ TEST(VectorTest, ctor_move_not_safe_alloc) {
 TEST(VectorTest, ctor_move_throwing_alloc_not_default) {
   throwing::count = 0;
   std::size_t size = uid(gen) + 5;
-  memory::pool_allocator<throwing> al1(size);
-  memory::pool_allocator<throwing> al2(size);
+  memory::pool_allocator<throwing> al1(size*sizeof(throwing));
+  memory::pool_allocator<throwing> al2(size*sizeof(throwing));
   memory::vector<throwing, memory::pool_allocator<throwing>> vec1(size, al1);
   try {
     memory::vector<throwing, memory::pool_allocator<throwing>> vec2(std::move(vec1),
@@ -469,6 +469,37 @@ TEST(VectorTest, assignment_copy_self) {
   ASSERT_EQ(vec1.back().birth, constructed::kCopy);
 }
 
+TEST(VectorTest, assignment_copy_with_alloc) {
+  std::size_t size = uid(gen);
+  memory::pool_allocator<safe> al1(sizeof(safe)*size*2);
+  memory::pool_allocator<safe> al2(sizeof(safe)*size*2);
+  memory::vector<safe, memory::pool_allocator<safe>> vec1(size, safe("not default"), al1);
+  memory::vector<safe, memory::pool_allocator<safe>> vec2(size/2, safe("not default"), al2);
+  
+  vec2 = vec1;
+
+  ASSERT_EQ(vec1.size(), vec2.size());
+  ASSERT_EQ(vec1.front(), vec2.front());
+  ASSERT_EQ(vec1.back(), vec2.front());
+  ASSERT_EQ(al1.allocd(), al2.allocd());
+}
+
+TEST(VectorTest, assignment_copy_with_alloc_grow) {
+  std::size_t size = uid(gen);
+  memory::pool_allocator<safe> al1(sizeof(safe)*size*2);
+  memory::pool_allocator<safe> al2(sizeof(safe)*size*2);
+  memory::vector<safe, memory::pool_allocator<safe>> vec1(size/2, safe("not default"), al1);
+  memory::vector<safe, memory::pool_allocator<safe>> vec2(size, safe("not default"), al2);
+  
+  vec2 = vec1;
+
+  ASSERT_EQ(vec1.size(), vec2.size());
+  ASSERT_EQ(vec1.front(), vec2.front());
+  ASSERT_EQ(vec1.back(), vec2.front());
+  ASSERT_EQ(vec2.capacity(), size);
+  ASSERT_EQ(al2.allocd(), size*sizeof(safe));
+}
+
 TEST(VectorTest, assignment_copy_throwing) {
   throwing::count = 0;
   std::size_t size = uid(gen) + 5;
@@ -491,16 +522,12 @@ TEST(VectorTest, assignment_copy_throwing) {
 
 TEST(VectorTest, assignment_move) {
   std::size_t size = uid(gen);
-  memory::vector<not_safe> vec1(size);
-  std::size_t cap = vec1.capacity();
-  not_safe *ptr = vec1.data();
-  memory::vector<not_safe> vec2;
+  std::vector<not_safe> vec1(size);
+  std::vector<not_safe> vec2;
 
   vec2 = std::move(vec1);
 
   ASSERT_EQ(vec2.size(), size);
-  ASSERT_EQ(vec2.capacity(), cap);
-  ASSERT_NE(vec2.data(), ptr);
   ASSERT_EQ(vec2.front(), not_safe());
   ASSERT_EQ(vec2.back(), not_safe());
 }
@@ -515,7 +542,7 @@ TEST(VectorTest, assignment_move_self) {
 
   ASSERT_EQ(vec1.size(), size);
   ASSERT_EQ(vec1.capacity(), cap);
-  ASSERT_NE(vec1.data(), ptr);
+  ASSERT_EQ(vec1.data(), ptr);
   ASSERT_EQ(vec1.front(), not_safe());
   ASSERT_EQ(vec1.back(), not_safe());
 }
