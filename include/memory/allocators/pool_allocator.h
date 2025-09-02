@@ -64,7 +64,12 @@ class pool_allocator {
 
   pool_allocator& operator=(pool_allocator&&) = delete;
 
-  constexpr virtual ~pool_allocator() noexcept {
+  constexpr virtual ~pool_allocator() noexcept(false) {
+    for (uint8_t *p = state(); p != pool_; ++p) {
+      if (*p) {
+        throw std::runtime_error("Memory leak detected: attempting to destroy pool allocator that has memory being used and not dealloc'd'");  // AOAOOOAOAOAOOAOAOAOAAOAO
+      }
+    }
     --trace_->ref_count;
     if (!trace_->ref_count) {
       operator delete(trace_);
@@ -89,6 +94,7 @@ class pool_allocator {
   constexpr void swap(pool_allocator& other) noexcept {
     if (trace_ != other.trace_) {
       std::swap(trace_, other.trace_);
+      std::swap(pool_, other.pool_);
     }
   }
 

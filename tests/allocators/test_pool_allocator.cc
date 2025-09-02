@@ -172,6 +172,7 @@ TEST(PoolAlloc, alloc_continious_race) {
     al.deallocate(ptr_array[i - 1], alloc_size);
     ASSERT_EQ(al.remaining() + al.allocd(), size);
   }
+  al.deallocate(ptr_array[count / alloc_size - 1], alloc_size);
 }
 
 TEST(PoolAlloc, alloc_continious_race_non_uniform) {
@@ -260,5 +261,19 @@ TEST(PoolAlloc, alloc_empty) {
   memory::pool_allocator<subject> al(size);
 
   ASSERT_NO_THROW(al.deallocate(al.allocate(0), 0));
+}
+
+TEST(PoolAlloc, alloc_leak) {
+  bool passed = false;
+  try {
+    constexpr int64_t size = 20*sizeof(subject);
+    memory::pool_allocator<subject> al(size);
+    subject* leak = al.allocate(4);
+  } catch (std::runtime_error& e) {
+    passed = true;
+  }
+  if (!passed) {
+    FAIL();
+  }
 }
 
