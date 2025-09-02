@@ -962,48 +962,48 @@ TEST(VectorTest, reserve_random) {
   }
 }
 
-// TEST(VectorTest, stf_safe) {
-//   for (std::size_t i = 0; i < loop; ++i) {
-//     memory::vector<safe> vec(uid(gen));
+TEST(VectorTest, stf_safe) {
+  for (std::size_t i = 0; i < loop; ++i) {
+    memory::vector<safe> vec(uid(gen));
 
-//     vec.reserve(vec.size() + uid(gen));
-//     vec.shrink_to_fit();
-//     ASSERT_EQ(vec.size(), vec.capacity());
-//     ASSERT_EQ(vec.back().birth, constructed::kMove);
-//     ASSERT_EQ(vec.front().birth, constructed::kMove);
-//   }
-// }
+    vec.reserve(vec.size() + uid(gen));
+    vec.shrink_to_fit();
+    ASSERT_EQ(vec.size(), vec.capacity());
+    ASSERT_EQ(vec.back().birth, constructed::kMove);
+    ASSERT_EQ(vec.front().birth, constructed::kMove);
+  }
+}
 
-// TEST(VectorTest, stf_not_safe) {
-//   for (std::size_t i = 0; i < loop; ++i) {
-//     memory::vector<not_safe> vec(uid(gen));
+TEST(VectorTest, stf_not_safe) {
+  for (std::size_t i = 0; i < loop; ++i) {
+    memory::vector<not_safe> vec(uid(gen));
 
-//     vec.reserve(vec.size() + uid(gen));
-//     vec.shrink_to_fit();
-//     ASSERT_EQ(vec.size(), vec.capacity());
-//     ASSERT_EQ(vec.back().birth, constructed::kCopy);
-//     ASSERT_EQ(vec.front().birth, constructed::kCopy);
-//   }
-// }
+    vec.reserve(vec.size() + uid(gen));
+    vec.shrink_to_fit();
+    ASSERT_EQ(vec.size(), vec.capacity());
+    ASSERT_EQ(vec.back().birth, constructed::kCopy);
+    ASSERT_EQ(vec.front().birth, constructed::kCopy);
+  }
+}
 
-// TEST(VectorTest, stf_throwing) {
-//   throwing::count = 0;
-//   memory::vector<throwing> vec(4);
+TEST(VectorTest, stf_throwing) {
+  throwing::count = 0;
+  memory::vector<throwing> vec(4);
 
-//   vec.reserve(10);
-//   std::size_t old_cap = vec.capacity();
-//   ASSERT_ANY_THROW(vec.shrink_to_fit());
-//   ASSERT_EQ(vec.capacity(), old_cap);
-// }
+  vec.reserve(10);
+  std::size_t old_cap = vec.capacity();
+  ASSERT_ANY_THROW(vec.shrink_to_fit());
+  ASSERT_EQ(vec.capacity(), old_cap);
+}
 
-// TEST(VectorTest, clear) {
-//   for (std::size_t i = 0; i < loop; ++i) {
-//     memory::vector<not_safe> vec(uid(gen), not_safe("dirty"));
+TEST(VectorTest, clear) {
+  for (std::size_t i = 0; i < loop; ++i) {
+    memory::vector<not_safe> vec(uid(gen), not_safe("dirty"));
 
-//     vec.clear();
-//     ASSERT_EQ(vec.size(), 0);
-//   }
-// }
+    vec.clear();
+    ASSERT_EQ(vec.size(), 0);
+  }
+}
 
 // TEST(VectorTest, resize_expand_not_safe) {
 //   std::size_t size = 10;

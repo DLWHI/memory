@@ -305,16 +305,11 @@ class vector {
     if (count > max_size()) {
       throw std::length_error("Cannot reserve space more than max_size()");
     } else if (count > cap_) {
-      pointer p = alloc(count);
+      pointer p;
       if constexpr (std::is_nothrow_move_constructible<T>::value) {
-        move(p, ptr_, ptr_ + size_);
+        p = move_buffer(count, ptr_, ptr_ + size_);
       } else {
-        try {
-          fill(p, ptr_, ptr_ + size_);
-        } catch(...) {
-          dealloc(p, count);
-          throw;
-        }
+        p = copy_buffer(count, ptr_, ptr_ + size_);
       }
       swap_out_buffer(p, count);
     }
@@ -322,14 +317,21 @@ class vector {
 
   // T must meet additional requirements of MoveInsertable into *this
   constexpr void shrink_to_fit() {
-    // if (buf_.cap > size_) {
-    //   resize_buffer(size_);
-    // }
+    if (cap_ > size_) {
+      pointer p;
+      if constexpr (std::is_nothrow_move_constructible<T>::value) {
+        p = move_buffer(size_, ptr_, ptr_ + size_);
+      } else {
+        p = copy_buffer(size_, ptr_, ptr_ + size_);
+      }
+      swap_out_buffer(p, size_);
+    }
   }
 
   // No additional requirements on template types
   constexpr void clear() noexcept {
     destroy(ptr_, size_);
+    size_ = 0;
   }
 
   // T must meet additional requirements of
@@ -735,13 +737,14 @@ class vector {
 
   template <typename InIt>
   constexpr pointer move_buffer(size_type size, InIt first, InIt last) {
+    static_assert(std::is_nothrow_move_constructible<T>::value, "Consider enabling that try/catch block");
     pointer p = alloc(size);
-    try {
+    // try {
       move(p, first, last);
-    } catch(...) {
-      dealloc(p, size);
-      throw;
-    }
+    // } catch(...) {
+    //   dealloc(p, size);
+    //   throw;
+    // }
     return p;
   }
 
@@ -762,7 +765,7 @@ class vector {
     }
     std::swap(new_buf, ptr_);
     std::swap(size, cap_);
-    destroy(new_buf, size);
+    destroy(new_buf, size_);
     dealloc(new_buf, size);
   }
 
