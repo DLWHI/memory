@@ -1,5 +1,5 @@
-#ifndef SP_TESTS_TEST_HELPERS_H_
-#define SP_TESTS_TEST_HELPERS_H_
+#ifndef MEMORY_TESTS_TEST_HELPERS_H_
+#define MEMORY_TESTS_TEST_HELPERS_H_
 
 #include <memory>
 #include <stdexcept>
@@ -94,13 +94,10 @@ class safe {
       : birth(constructed::kCopy), id_(other.id_), leak_(new int()) {}
   safe& operator=(const safe& other) {
     id_ = other.id_;
-    leak_ = new int();
     return *this;
   }
   safe& operator=(safe&& other) noexcept  {
     id_ = std::move(other.id_);
-    leak_ = other.leak_;
-    other.leak_ = nullptr;
     return *this;
   }
   virtual ~safe() { delete leak_; }
@@ -223,4 +220,5 @@ class no_def : public safe {
 //   }
 //   virtual ~not_safe_assign() {}
 // };
-#endif  // SP_TESTS_TEST_HELPERS_H_
+#endif  // MEMORY_TESTS_TEST_HELPERS_H_
+

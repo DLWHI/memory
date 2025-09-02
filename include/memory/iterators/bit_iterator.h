@@ -90,3 +90,4 @@ class bit_iterator final {
 };
 }  // namespace memory
 #endif  // MEMORY_ITERATORS_BIT_ITERATOR_H_
+

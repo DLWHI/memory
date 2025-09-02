@@ -216,3 +216,4 @@ constexpr memory::array<typename std::remove_cv<T>::type, N> to_array(T (&&a)[N]
 
 }  // namespace memory
 #endif  // MEMORY_CONTAINERS_ARRAY_H_
+

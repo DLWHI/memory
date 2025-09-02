@@ -41,3 +41,4 @@ constexpr reverse_container<T> reverse(T&& iterable) noexcept {
 }
 
 #endif  // MEMORY_CONTAINERS_REVERSE_CONTAINER_H_
+

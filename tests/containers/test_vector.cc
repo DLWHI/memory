@@ -738,148 +738,142 @@ TEST(VectorTest, reverse_iterators) {
 
 //==============================================================================
 // capacity
-// TEST(VectorTest, assign_gt_not_safe_1) {
-//   std::size_t size = 322;
-//   memory::vector<not_safe> vec(10);
+TEST(VectorTest, assign_gt_not_safe_1) {
+  std::size_t size = 322;
+  memory::vector<not_safe> vec(10);
 
-//   vec.assign(size, not_safe("tm"));
+  vec.assign(size, not_safe("tm"));
 
-//   ASSERT_EQ(vec.size(), size);
-//   for (const not_safe &ob : vec) {
-//     ASSERT_EQ(ob, not_safe("tm"));
-//   }
-// }
+  ASSERT_EQ(vec.size(), size);
+  for (const not_safe &ob : vec) {
+    ASSERT_EQ(ob, not_safe("tm"));
+  }
+}
 
-// TEST(VectorTest, assign_gt_not_safe_2) {
-//   std::size_t size = 13;
-//   memory::vector<not_safe> vec(10);
+TEST(VectorTest, assign_gt_not_safe_2) {
+  std::size_t size = 13;
+  memory::vector<not_safe> vec(10);
 
-//   vec.assign(size, not_safe("nm"));
+  vec.assign(size, not_safe("nm"));
 
-//   ASSERT_EQ(vec.size(), size);
-//   for (const not_safe &ob : vec) {
-//     ASSERT_EQ(ob, not_safe("nm"));
-//   }
-// }
+  ASSERT_EQ(vec.size(), size);
+  for (const not_safe &ob : vec) {
+    ASSERT_EQ(ob, not_safe("nm"));
+  }
+}
 
-// TEST(VectorTest, assign_lt_not_safe_1) {
-//   std::size_t size = 10;
-//   memory::vector<not_safe> vec(322);
-//   not_safe *ptr = vec.data();
+TEST(VectorTest, assign_lt_not_safe_1) {
+  std::size_t size = 10;
+  memory::vector<not_safe> vec(322);
+  not_safe *ptr = vec.data();
 
-//   vec.assign(size, not_safe("tm"));
+  vec.assign(size, not_safe("tm"));
 
-//   ASSERT_EQ(vec.size(), size);
-//   ASSERT_EQ(vec.data(), ptr);
-//   for (const not_safe &ob : vec) {
-//     ASSERT_EQ(ob, not_safe("tm"));
-//     ASSERT_EQ(ob.birth, constructed::kDef);
-//   }
-// }
+  ASSERT_EQ(vec.size(), size);
+  ASSERT_EQ(vec.data(), ptr);
+  for (const not_safe &ob : vec) {
+    ASSERT_EQ(ob, not_safe("tm"));
+    ASSERT_EQ(ob.birth, constructed::kDef);
+  }
+}
 
-// TEST(VectorTest, assign_lt_not_safe_2) {
-//   std::size_t size = 10;
-//   memory::vector<not_safe> vec(13);
-//   not_safe *ptr = vec.data();
+TEST(VectorTest, assign_lt_not_safe_2) {
+  std::size_t size = 10;
+  memory::vector<not_safe> vec(13);
+  not_safe *ptr = vec.data();
 
-//   vec.assign(size, not_safe("nm"));
+  vec.assign(size, not_safe("nm"));
 
-//   ASSERT_EQ(vec.size(), size);
-//   ASSERT_EQ(vec.data(), ptr);
+  ASSERT_EQ(vec.size(), size);
+  ASSERT_EQ(vec.data(), ptr);
 
-//   for (const not_safe &ob : vec) {
-//     ASSERT_EQ(ob, not_safe("nm"));
-//   }
-// }
+  for (const not_safe &ob : vec) {
+    ASSERT_EQ(ob, not_safe("nm"));
+  }
+}
 
-// TEST(VectorTest, assign_gt_no_realloc) {
-//   memory::vector<safe> vec(10);
+TEST(VectorTest, assign_gt_no_realloc) {
+  memory::vector<safe> vec(10);
 
-//   vec.assign(322, safe("tm"));
-//   safe *ptr = vec.data();
-//   vec.assign(10, safe("tm"));
-//   vec.assign(16, safe("tm"));
+  vec.assign(322, safe("tm"));
+  safe *ptr = vec.data();
+  vec.assign(10, safe("tm"));
+  vec.assign(16, safe("tm"));
 
-//   ASSERT_EQ(vec.size(), 16);
-//   ASSERT_EQ(vec.capacity(), 322);
-//   ASSERT_EQ(vec.data(), ptr);
-//   for (const safe &ob : vec) {
-//     ASSERT_EQ(ob, safe("tm"));
-//   }
-// }
+  ASSERT_EQ(vec.size(), 16);
+  ASSERT_EQ(vec.capacity(), 322);
+  ASSERT_EQ(vec.data(), ptr);
+  for (const safe &ob : vec) {
+    ASSERT_EQ(ob, safe("tm"));
+  }
+}
 
-// TEST(VectorTest, assign_throwing) {
-//   throwing::count = 0;
-//   std::size_t size = uid(gen);
-//   memory::vector<throwing> vec(size);
+TEST(VectorTest, assign_throwing) {
+  throwing::count = 0;
+  std::size_t size = uid(gen);
+  memory::vector<throwing> vec(size);
 
-//   ASSERT_ANY_THROW(vec.assign(7, throwing()));
+  ASSERT_ANY_THROW(vec.assign(7, throwing()));
 
-//   ASSERT_EQ(vec.size(), size);
-//   for (const throwing &ob : vec) {
-//     ASSERT_EQ(ob, throwing());
-//   }
-// }
+  ASSERT_EQ(vec.size(), size);
+  for (const throwing &ob : vec) {
+    ASSERT_EQ(ob, throwing());
+  }
+}
 
-// TEST(VectorTest, assign_list_safe) {
-//   memory::vector<safe> vec(uid(gen));
+TEST(VectorTest, assign_list_safe) {
+  memory::vector<safe> vec(uid(gen));
 
-//   vec.assign({safe(), safe(), safe(), safe(), safe()});
+  vec.assign({safe(), safe(), safe(), safe(), safe()});
 
-//   for (const safe &ob : vec) {
-//     ASSERT_EQ(ob, safe());
-//   }
-// }
+  for (const safe &ob : vec) {
+    ASSERT_EQ(ob, safe());
+  }
+}
 
-// TEST(VectorTest, assign_random) {
-//   for (std::size_t i = 0; i < loop; ++i) {
-//     memory::vector<safe> vec(uid(gen));
+TEST(VectorTest, assign_random) {
+  for (std::size_t i = 0; i < loop; ++i) {
+    memory::vector<safe> vec(uid(gen));
 
-//     vec.assign(uid(gen), safe("ass"));
+    vec.assign(uid(gen), safe("ass"));
 
-//     for (const safe &ob : vec) {
-//       ASSERT_EQ(ob, safe("ass"));
-//     }
-//   }
-// }
+    for (const safe &ob : vec) {
+      ASSERT_EQ(ob, safe("ass"));
+    }
+  }
+}
 
-// TEST(VectorTest, assign_list_not_safe) {
-//   memory::vector<not_safe> vec(uid(gen));
+TEST(VectorTest, assign_list_not_safe) {
+  memory::vector<not_safe> vec(uid(gen));
 
-//   vec.assign({not_safe(), not_safe(), not_safe(), not_safe(), not_safe()});
+  vec.assign({not_safe(), not_safe(), not_safe(), not_safe(), not_safe()});
 
-//   for (const not_safe &ob : vec) {
-//     ASSERT_EQ(ob, not_safe());
-//   }
-// }
+  for (const not_safe &ob : vec) {
+    ASSERT_EQ(ob, not_safe());
+  }
+}
 
-// TEST(VectorTest, assign_list_throwing) {
-//   throwing::count = 0;
-//   std::size_t size = uid(gen);
-//   memory::vector<throwing> vec(size);
+TEST(VectorTest, assign_list_throwing) {
+  throwing::count = 0;
+  std::size_t size = uid(gen);
+  memory::vector<throwing> vec(size);
 
-//   ASSERT_ANY_THROW(vec.assign({throwing("not default"), throwing("not default"),
-//                                throwing("not default"), throwing("not default"),
-//                                throwing("not default")}));
+  ASSERT_ANY_THROW(vec.assign({throwing("not default"), throwing("not default"),
+                               throwing("not default"), throwing("not default"),
+                               throwing("not default")}));
 
-//   ASSERT_EQ(vec.size(), size);
-//   for (std::size_t i = 0; i < size; ++i) {
-//     ASSERT_NO_THROW(vec.at(i));
-//   }
-// }
+  ASSERT_EQ(vec.size(), size);
+  for (std::size_t i = 0; i < size; ++i) {
+    ASSERT_NO_THROW(vec.at(i));
+  }
+}
 
-// TEST(VectorTest, assign_invalid_count) {
-//   memory::vector<safe> vec(uid(gen));
-
-//   ASSERT_THROW(vec.assign(-uid(gen), safe()), std::length_error);
-// }
-
-// TEST(VectorTest, assign_big_count) {
-//   memory::vector<safe> vec(uid(gen));
-//   std::allocator<safe> al;
-//   std::size_t max = std::allocator_traits<std::allocator<safe>>::max_size(al);
-//   ASSERT_THROW(vec.assign(max + 1, safe()), std::length_error);
-// }
+TEST(VectorTest, assign_big_count) {
+  memory::vector<safe> vec(uid(gen));
+  std::allocator<safe> al;
+  std::size_t max = std::allocator_traits<std::allocator<safe>>::max_size(al);
+  ASSERT_THROW(vec.assign(max + 1, safe()), std::length_error);
+}
 
 // TEST(VectorTest, reserve_expand_safe) {
 //   std::size_t size = 10;
@@ -1907,3 +1901,4 @@ TEST(VectorTest, reverse_iterators) {
 //   constexpr std::size_t cexper = constexpr_check(0);
 //   ASSERT_EQ(cexper, 0);
 // }
+

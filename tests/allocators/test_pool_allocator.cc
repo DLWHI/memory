@@ -261,3 +261,4 @@ TEST(PoolAlloc, alloc_empty) {
 
   ASSERT_NO_THROW(al.deallocate(al.allocate(0), 0));
 }
+

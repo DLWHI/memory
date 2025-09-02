@@ -49,7 +49,12 @@ class vector {
   // T must meet additional requirements of DefaultInsertable into *this
   constexpr explicit vector(size_type size, const Allocator& al = Allocator())
       : size_(size), cap_(size), al_(al), ptr_(alloc(size_)) {
-    construct(ptr_, size_);
+    try {
+      construct(ptr_, size_);
+    } catch(...) {
+      dealloc(ptr_, size_);
+      throw;
+    }
   }
 
   // T must meet additional requirements of CopyInsertable into *this
@@ -251,7 +256,7 @@ class vector {
     }
     pointer p = ptr_;
     if (cap_ < count) {
-      p = create_buffer(count, value);
+      p = copy_buffer(count, value);
       swap_out_buffer(p, count);
     } else {
       pointer end = ptr_ + size_;
@@ -659,7 +664,7 @@ class vector {
   constexpr void copy_assign(size_type count, InIt first, InIt last) {
     pointer p = ptr_;
     if (cap_ < count) {
-      p = create_buffer<InIt, false>(count, first, last);
+      p = copy_buffer(count, first, last);
       swap_out_buffer(p, count);
     } else {
       pointer end = ptr_ + size_;
@@ -679,7 +684,7 @@ class vector {
   constexpr void move_assign(size_type count, InIt first, InIt last) {
     pointer p = ptr_;
     if (cap_ < count) {
-      p = create_buffer<InIt, true>(count, first, last);
+      p = move_buffer(count, first, last);
       swap_out_buffer(p, count);
     } else {
       pointer end = ptr_ + size_;
@@ -695,15 +700,11 @@ class vector {
     size_ = count;
   }
 
-  template <typename InIt, bool kMove = false>
-  constexpr pointer create_buffer(size_type size, InIt first, InIt last) {
+  template <typename InIt>
+  constexpr pointer copy_buffer(size_type size, InIt first, InIt last) {
     pointer p = alloc(size);
     try {
-      if constexpr (kMove) {
-        move(p, first, last);
-      } else {
-        fill(p, first, last);
-      }
+      fill(p, first, last);
     } catch(...) {
       dealloc(p, size);
       throw;
@@ -711,7 +712,19 @@ class vector {
     return p;
   } 
 
-  constexpr pointer create_buffer(size_type count, value_type value) {
+  template <typename InIt>
+  constexpr pointer move_buffer(size_type size, InIt first, InIt last) {
+    pointer p = alloc(size);
+    try {
+      move(p, first, last);
+    } catch(...) {
+      dealloc(p, size);
+      throw;
+    }
+    return p;
+  }
+
+  constexpr pointer copy_buffer(size_type count, value_type value) {
     pointer p = alloc(count);
     try {
       construct(p, count, value);
@@ -762,3 +775,4 @@ class vector {
 };
 }  // namespace memory
 #endif  // MEMORY_CONTAINERS_VECTOR_H_
+

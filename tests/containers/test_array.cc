@@ -199,3 +199,4 @@ TEST(ArrayTest, stream) {
   stream << arr;
   ASSERT_EQ(expected, stream.str());
 }
+
