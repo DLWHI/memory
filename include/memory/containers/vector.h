@@ -56,7 +56,12 @@ class vector {
   constexpr explicit vector(size_type size, const_reference value,
                             const Allocator& al = Allocator())
       : size_(size), cap_(size), al_(al), ptr_(alloc(size_)) {
-    construct(ptr_, size_, value);
+    try {
+      construct(ptr_, size_, value);
+    } catch(...) {
+      dealloc(ptr_, size_);
+      throw;
+    }
   };
 
   // T must meet additional requirements of
@@ -70,36 +75,25 @@ class vector {
         cap_(size_),
         al_(al),
         ptr_(alloc(size_)) {
-    fill(ptr_, first, last);
+    try {
+      fill(ptr_, first, last);
+    } catch(...) {
+      dealloc(ptr_, size_);
+      throw;
+    }
   }
 
   // T must meet additional requirements of EmplaceConstructible
   constexpr vector(std::initializer_list<value_type> values,
                    const Allocator& al = Allocator())
-      : size_(values.size()),
-        cap_(size_),
-        al_(al),
-        ptr_(alloc(size_)) {
-    fill(ptr_, values.begin(), values.end());
-  }
-
-  // T must meet additional requirements of CopyInsertable into *this
+      : vector(values.begin(), values.end(), al) {}
+  
   constexpr vector(const vector& other)
-      : size_(other.size_),
-        cap_(size_),
-        al_(std::allocator_traits<Allocator>::select_on_container_copy_construction(other.al_)),
-        ptr_(alloc(size_)) {
-    fill(ptr_, other.ptr_, other.ptr_ + other.size_);
-  }
+      : vector(other.ptr_, other.ptr_ + other.size_, std::allocator_traits<Allocator>::select_on_container_copy_construction(other.al_)) {}
 
   // T must meet additional requirements of CopyInsertable into *this
   constexpr vector(const vector& other, const Allocator& al)
-      : size_(other.size_),
-        cap_(size_),
-        al_(al),
-        ptr_(alloc(size_)) {
-    fill(ptr_, other.ptr_, other.ptr_ + other.size_);
-  };
+      : vector(other.ptr_, other.ptr_ + other.size_, al) {};
 
   // No additional requirements on template types
   constexpr vector(vector&& other) noexcept
@@ -166,7 +160,12 @@ class vector {
     }
     return *this;   
   }
-
+  
+  constexpr vector& operator=(std::initializer_list<value_type> ilist) {
+    assign(ilist.begin(), ilist.end());
+    return *this;   
+  }
+  
   // No additional requirements on template types
   constexpr virtual ~vector() noexcept { 
     clear(); 
@@ -247,21 +246,26 @@ class vector {
   // T must meet additional requirement of CopyAssignable and
   //  CopyInsertable into *this
   constexpr void assign(size_type count, const_reference value) {
-    // if (count > max_size() || count < 0) {
-    //   throw std::length_error("Invalid count provided");
-    // }
-    // if (count > buf_.cap) {
-    //   pointer_buffer temp(std::max(kCapMul * buf_.cap, count), &al_, ptr_);
-    //   fill(temp.ptr, count, value);
-    //   buf_.swap(temp);
-    //   destroy_content(temp.ptr, size_);
-    //   size_ = count;
-    // } else {
-    //   for (size_type i = 0; i < count && i < size_; ++i) {
-    //     ptr_[i] = value;
-    //   }
-    //   move_end(count - size_, value);
-    // }
+    if (count > max_size()) {
+      throw std::length_error("Invalid count provided");
+    }
+    pointer p = ptr_;
+    if (cap_ < count) {
+      p = create_buffer(count, value);
+      swap_out_buffer(p, count);
+    } else {
+      pointer end = ptr_ + size_;
+      size_type i = count;
+      for (; p != end && i; --i, ++p) {
+        *p = value;
+      }
+      if (p != end) {
+        destroy(p, end - p);
+      } else {
+        construct(p, i, value);
+      }
+    }
+    size_ = count;
   }
 
   // T must meet additional requirement of EmplaceConstructible into *this
@@ -706,6 +710,17 @@ class vector {
     }
     return p;
   } 
+
+  constexpr pointer create_buffer(size_type count, value_type value) {
+    pointer p = alloc(count);
+    try {
+      construct(p, count, value);
+    } catch(...) {
+      dealloc(p, count);
+      throw;
+    }
+    return p;
+  }
 
   constexpr void swap_out_buffer(pointer new_buf, size_type size) {
     if (new_buf == ptr_) {
