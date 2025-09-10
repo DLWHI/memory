@@ -10,6 +10,12 @@
 #include "../iterators/pointer_iterator.h" // iterator and std::distance
 #include "../iterators/reverse_iterator.h"
 
+#if __cplusplus >= 202002L
+#define MEMORY_CPP20CONSTEXPR constexpr 
+#else
+#define MEMORY_CPP20CONSTEXPR
+#endif  // 202002L
+
 namespace memory {
 // Requires N >= 0 (UB otherwise)
 // Relies on implicitly declared ctor so thus implies:
@@ -89,7 +95,7 @@ struct array {
     }
   }
 
-  constexpr void swap(array& other) noexcept(
+  MEMORY_CPP20CONSTEXPR void swap(array& other) noexcept(
       std::is_nothrow_swappable<T>::value) {
     for (size_type i = 0; i < N; ++i) {
       std::swap(elements[i], other.elements[i]);
@@ -98,12 +104,17 @@ struct array {
 
   constexpr reference operator[](size_type i) { return elements[i]; }
   constexpr const_reference operator[](size_type i) const { return elements[i]; }
+  
   constexpr bool operator==(const array& other) const {
     for (size_type i = 0; i < N; ++i)
       if (elements[i] != other.elements[i]) return false;
     return true;
   }
-
+  
+  constexpr bool operator!=(const array& other) const {
+    return !(*this == other);
+  }
+  
   friend std::ostream& operator<<(std::ostream& os, const array& array) {
     for (size_type i = 0; i < N - 1; ++i) os << array.elements[i] << ' ';
     os << array.elements[N - 1];
@@ -181,6 +192,10 @@ struct array<T, 0> {
   constexpr bool operator==(const array& other) const {
     (void)other;
     return true;
+  }
+  constexpr bool operator!=(const array& other) const {
+    (void)other;
+    return false;
   }
 
   friend std::ostream& operator<<(std::ostream& os,

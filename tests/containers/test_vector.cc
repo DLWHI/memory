@@ -25,6 +25,7 @@ constexpr static std::size_t loop = LOOP_COUNT;
 constexpr static std::size_t loop = 15;
 #endif
 
+#if __cplusplus >= 202002L
 // constexpr std::size_t constexpr_check(std::size_t val) {
 //   memory::vector<std::size_t> vec = {1, 2, 3, 4, 5};
 //   vec.emplace(vec.end(), 7);
@@ -40,6 +41,7 @@ constexpr static std::size_t loop = 15;
 //   vec.push_back(val);
 //   return *(vec.end() - 1);
 // }
+#endif
 
 //==============================================================================
 // ctors
@@ -1648,74 +1650,74 @@ TEST(VectorTest, resize_random) {
 //   }
 // }
 
-// TEST(VectorTest, push_back_not_safe) {
-//   not_safe push_value("pushed");
-//   memory::vector<not_safe> vec(uid(gen));
+TEST(VectorTest, push_back_not_safe) {
+  not_safe push_value("pushed");
+  memory::vector<not_safe> vec(uid(gen));
 
-//   vec.push_back(push_value);
+  vec.push_back(push_value);
 
-//   ASSERT_EQ(vec.back(), push_value);
-//   for (std::size_t i = 0; i < vec.size(); ++i) {
-//     ASSERT_EQ(vec[i].birth, constructed::kCopy);
-//   }
-// }
+  ASSERT_EQ(vec.back(), push_value);
+  for (std::size_t i = 0; i < vec.size(); ++i) {
+    ASSERT_EQ(vec[i].birth, constructed::kCopy);
+  }
+}
 
-// TEST(VectorTest, push_back_safe) {
-//   memory::vector<safe> vec(uid(gen));
+TEST(VectorTest, push_back_safe) {
+  memory::vector<safe> vec(uid(gen));
 
-//   vec.push_back(safe("pushed"));
+  vec.push_back(safe("pushed"));
 
-//   ASSERT_EQ(vec.back(), safe("pushed"));
-//   for (std::size_t i = 0; i < vec.size(); ++i) {
-//     ASSERT_EQ(vec[i].birth, constructed::kMove);
-//   }
-// }
+  ASSERT_EQ(vec.back(), safe("pushed"));
+  for (std::size_t i = 0; i < vec.size(); ++i) {
+    ASSERT_EQ(vec[i].birth, constructed::kMove);
+  }
+}
 
-// TEST(VectorTest, push_back_continious) {
-//   memory::vector<safe> vec(uid(gen));
+TEST(VectorTest, push_back_continious) {
+  memory::vector<safe> vec(uid(gen));
 
-//   for (std::size_t i = 0; i < loop; ++i) {
-//     vec.push_back(safe("pushed"));
-//     ASSERT_EQ(vec.back(), safe("pushed"));
-//     ASSERT_EQ(vec.back().birth, constructed::kMove);
-//   }
-// }
+  for (std::size_t i = 0; i < loop; ++i) {
+    vec.push_back(safe("pushed"));
+    ASSERT_EQ(vec.back(), safe("pushed"));
+    ASSERT_EQ(vec.back().birth, constructed::kMove);
+  }
+}
 
-// TEST(VectorTest, push_back_throwing) {
-//   throwing::count = 0;
-//   std::size_t size = 4;
-//   throwing push_value("pushed");
-//   memory::vector<throwing> vec(size);
-//   ASSERT_ANY_THROW(vec.push_back(push_value));
-//   ASSERT_EQ(vec.size(), size);
-//   for (auto i = 0; i < size; ++i) {
-//     ASSERT_NO_THROW(vec.at(i));
-//   }
+TEST(VectorTest, push_back_throwing) {
+  throwing::count = 0;
+  std::size_t size = 4;
+  throwing push_value("pushed");
+  memory::vector<throwing> vec(size);
+  ASSERT_ANY_THROW(vec.push_back(push_value));
+  ASSERT_EQ(vec.size(), size);
+  for (auto i = 0; i < size; ++i) {
+    ASSERT_NO_THROW(vec.at(i));
+  }
 
-//   throwing::count = 4;
-//   ASSERT_ANY_THROW(vec.push_back(push_value));
-//   ASSERT_EQ(vec.size(), size);
-//   for (auto i = 0; i < size; ++i) {
-//     ASSERT_NO_THROW(vec.at(i));
-//   }
-// }
+  throwing::count = 4;
+  ASSERT_ANY_THROW(vec.push_back(push_value));
+  ASSERT_EQ(vec.size(), size);
+  for (auto i = 0; i < size; ++i) {
+    ASSERT_NO_THROW(vec.at(i));
+  }
+}
 
-// TEST(VectorTest, pop_back_same_vector) {
-//   memory::vector<safe> vec(77, safe("default"));
-//   for (std::size_t i = 0; i < 45; ++i) {
-//     vec.pop_back();
-//   }
-//   ASSERT_EQ(vec.size(), 77 - 45);
-// }
+TEST(VectorTest, pop_back_same_vector) {
+  memory::vector<safe> vec(77, safe("default"));
+  for (std::size_t i = 0; i < 45; ++i) {
+    vec.pop_back();
+  }
+  ASSERT_EQ(vec.size(), 77 - 45);
+}
 
-// TEST(VectorTest, pop_back_to_empty) {
-//   std::size_t size = uid(gen);
-//   memory::vector<safe> vec(size);
-//   for (std::size_t i = 0; i < size; ++i) {
-//     vec.pop_back();
-//   }
-//   ASSERT_EQ(vec.size(), 0);
-// }
+TEST(VectorTest, pop_back_to_empty) {
+  std::size_t size = uid(gen);
+  memory::vector<safe> vec(size);
+  for (std::size_t i = 0; i < size; ++i) {
+    vec.pop_back();
+  }
+  ASSERT_EQ(vec.size(), 0);
+}
 
 TEST(VectorTest, emplace_not_safe) {
   memory::vector<not_safe> vec(54);
@@ -1896,8 +1898,10 @@ TEST(VectorTest, stream) {
   EXPECT_EQ(expected, stream.str());
 }
 
+#if __cplusplus >= 202002L
 // TEST(VectorTest, valid_constexpr) {
 //   constexpr std::size_t cexper = constexpr_check(0);
 //   ASSERT_EQ(cexper, 0);
 // }
+#endif
 

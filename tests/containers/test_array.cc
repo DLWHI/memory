@@ -12,7 +12,6 @@ constexpr int constexpr_check(int val) {
   TargetArray<int, 7> arr1 = {1, 2, 3, 4, 5, 0, 0};
   TargetArray<int, 7> arr2 = {1, 2, 3, 4, 5, 6, 7};
 
-  arr1.swap(arr2);
   arr2.fill(0);
 
   arr2[3] = val;

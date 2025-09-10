@@ -1,12 +1,14 @@
 #ifndef MEMORY_ITERATORS_BIT_ITERATOR_H_
 #define MEMORY_ITERATORS_BIT_ITERATOR_H_
 #include <cstdint>      // int64_t & uint8_t
-#include <iterator>     // std::bidirectional_iterator_tag
+#include <iterator>     // std::random_access_terator_tag
 #include <iostream>
+
 namespace memory {
 class bit_iterator final {
  public:
-  using iterator_category = std::bidirectional_iterator_tag;
+  using iterator_category = std::random_access_iterator_tag;
+  using pointer = void*;
   using byte_type = uint8_t;
   using value_type = bool;
   using reference = bool&;

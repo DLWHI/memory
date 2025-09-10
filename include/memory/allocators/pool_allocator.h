@@ -7,6 +7,12 @@
 
 #include "../iterators/bit_iterator.h"
 
+#if __cplusplus >= 202002L
+#define MEMORY_CPP20CONSTEXPR constexpr 
+#else
+#define MEMORY_CPP20CONSTEXPR
+#endif  // 202002L
+
 namespace memory {
 // No general requirements on type T
 template <typename T>
@@ -28,7 +34,7 @@ class pool_allocator {
   using propagate_on_container_move_assignment = std::false_type;
   using propagate_on_container_swap = std::true_type;
 
-  constexpr explicit pool_allocator(size_type size) 
+  MEMORY_CPP20CONSTEXPR explicit pool_allocator(size_type size) 
       : trace_(alloc_trace(size)) {
     pool_ = state() + (size + 7)/8;
     trace_->allocd = 0;
@@ -37,21 +43,21 @@ class pool_allocator {
   }
 
   template <typename U>
-  constexpr pool_allocator(const pool_allocator<U>& other) noexcept
+  MEMORY_CPP20CONSTEXPR pool_allocator(const pool_allocator<U>& other) noexcept
       : pool_(other.pool_), trace_(reinterpret_cast<trace_type*>(other.trace_)) {
     ++trace_->ref_count;
   }
 
   template <typename U>
-  constexpr pool_allocator(pool_allocator<U>&& other) noexcept
+  MEMORY_CPP20CONSTEXPR pool_allocator(pool_allocator<U>&& other) noexcept
       : pool_allocator(other) {} 
 
-  constexpr pool_allocator(const pool_allocator& other) noexcept
+  MEMORY_CPP20CONSTEXPR pool_allocator(const pool_allocator& other) noexcept
       : pool_(other.pool_), trace_(reinterpret_cast<trace_type*>(other.trace_)) {
     ++trace_->ref_count;
   }
 
-  constexpr pool_allocator(pool_allocator&& other) noexcept
+  MEMORY_CPP20CONSTEXPR pool_allocator(pool_allocator&& other) noexcept
       : pool_allocator(other) {}
 
   template <typename U>
@@ -64,7 +70,7 @@ class pool_allocator {
 
   pool_allocator& operator=(pool_allocator&&) = delete;
 
-  constexpr virtual ~pool_allocator() noexcept(false) {
+  MEMORY_CPP20CONSTEXPR virtual ~pool_allocator() noexcept(false) {
     --trace_->ref_count;
     if (!trace_->ref_count) {
       for (uint8_t *p = state(); p != pool_; ++p) {
@@ -79,27 +85,27 @@ class pool_allocator {
 
   //==============================================================================
 
-  constexpr size_type max_size() const noexcept {
+  MEMORY_CPP20CONSTEXPR size_type max_size() const noexcept {
     return trace_->limit / sizeof(T);
   }
 
-  constexpr size_type allocd() const noexcept {
+  MEMORY_CPP20CONSTEXPR size_type allocd() const noexcept {
     return trace_->allocd;
   }
 
-  constexpr size_type remaining() const noexcept {
+  MEMORY_CPP20CONSTEXPR size_type remaining() const noexcept {
     return trace_->limit - trace_->allocd;
   }
   //==============================================================================
 
-  constexpr void swap(pool_allocator& other) noexcept {
+  MEMORY_CPP20CONSTEXPR void swap(pool_allocator& other) noexcept {
     if (trace_ != other.trace_) {
       std::swap(trace_, other.trace_);
       std::swap(pool_, other.pool_);
     }
   }
 
-  constexpr T* allocate(size_type count) {
+  MEMORY_CPP20CONSTEXPR T* allocate(size_type count) {
     size_type chunk_size = count * sizeof(T);
     bit_iterator first(state());
     bit_iterator last = first;
@@ -117,7 +123,7 @@ class pool_allocator {
     return reinterpret_cast<T*>(pool_ + first.position());
   }
 
-  constexpr void deallocate(T* ptr, size_type count) noexcept {
+  MEMORY_CPP20CONSTEXPR void deallocate(T* ptr, size_type count) noexcept {
     size_type chunk_size = count * sizeof(T);
     int64_t offs = reinterpret_cast<uint8_t*>(ptr) - pool_;
     if (offs > trace_->limit) { return;}
@@ -126,16 +132,16 @@ class pool_allocator {
     trace_->allocd -= chunk_size;
    }
 
-  constexpr bool operator==(const pool_allocator& other) const noexcept {
+  MEMORY_CPP20CONSTEXPR bool operator==(const pool_allocator& other) const noexcept {
     return trace_ == other.trace_;
   }
 
-  constexpr bool operator!=(const pool_allocator& other) const noexcept {
+  MEMORY_CPP20CONSTEXPR bool operator!=(const pool_allocator& other) const noexcept {
     return trace_ != other.trace_;
   }
 
  private:
-  constexpr uint8_t* state() noexcept {
+  MEMORY_CPP20CONSTEXPR uint8_t* state() noexcept {
     return reinterpret_cast<uint8_t*>(trace_ + 1);
   }
 
@@ -156,5 +162,8 @@ void swap(pool_allocator<T>& lhs, pool_allocator<T>& rhs) noexcept {
   lhs.swap(rhs);
 }
 }  // namespace memory
+
+#undef MEMORY_CPP20CONSTEXPR
+
 #endif  // MEMORY_ALLOCATORS_POOL_ALLOCATOR_H_
 
