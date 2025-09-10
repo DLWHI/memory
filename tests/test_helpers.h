@@ -86,8 +86,7 @@ class safe {
   safe() : birth(constructed::kDef), id_("default"), leak_(new int()) {}
   explicit safe(const std::string& name)
       : birth(constructed::kParam), id_(name), leak_(new int()) {}
-  safe(safe&& other) noexcept 
-      : birth(constructed::kMove), id_(std::move(other.id_)), leak_(other.leak_) {
+  safe(safe&& other) noexcept : birth(constructed::kMove), id_(std::move(other.id_)), leak_(other.leak_) {
     other.leak_ = nullptr;
   }
   safe(const safe& other)

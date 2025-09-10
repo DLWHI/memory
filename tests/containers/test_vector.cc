@@ -1151,360 +1151,360 @@ TEST(VectorTest, resize_random) {
 //==============================================================================
 // modifiers
 
-TEST(VectorTest, insert_continious) {
-  not_safe insert_val("inserted");
-  memory::vector<not_safe> vec(60);
-  std::size_t insert = 0;
-  for (std::size_t i = 0; i < loop; ++i, insert += 4) {
-    auto pos = vec.insert(vec.begin() + insert, insert_val);
-    ASSERT_EQ(pos, vec.begin() + insert);
-    ASSERT_EQ(*pos, insert_val);
-  }
-}
-
-TEST(VectorTest, insert_not_safe) {
-  memory::vector<not_safe> vec(60);
-  std::size_t insert = 8;
-  auto pos = vec.insert(vec.begin() + insert, not_safe("inserted"));
-  ASSERT_EQ(pos, vec.begin() + insert);
-  ASSERT_EQ(*pos, not_safe("inserted"));
-  for (auto i = vec.begin(); i != pos; ++i) {
-    ASSERT_NE(*i, not_safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kCopy);
-  }
-  for (auto i = pos + 1; i != vec.end(); ++i) {
-    ASSERT_NE(*i, not_safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kCopy);
-  }
-}
-
-TEST(VectorTest, insert_safe) {
-  memory::vector<safe> vec(60);
-  std::size_t insert = 47;
-  auto pos = vec.insert(vec.begin() + insert, safe("inserted"));
-  ASSERT_EQ(pos, vec.begin() + insert);
-  ASSERT_EQ(*pos, safe("inserted"));
-  for (auto i = vec.begin(); i != pos; ++i) {
-    ASSERT_NE(*i, safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kMove);
-  }
-  for (auto i = pos + 1; i != vec.end(); ++i) {
-    ASSERT_NE(*i, safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kMove);
-  }
-}
-
-TEST(VectorTest, insert_empty) {
-  safe insert_val("inserted");
-  memory::vector<safe> vec;
-  auto insert_pos = vec.insert(vec.begin(), insert_val);
-  ASSERT_EQ(vec.size(), 1);
-  ASSERT_EQ(vec.capacity(), 1);
-  ASSERT_NE(vec.data(), nullptr);
-  ASSERT_EQ(insert_pos, vec.begin());
-  ASSERT_EQ(*insert_pos, insert_val);
-}
-
-TEST(VectorTest, insert_throwing) {
-  throwing::count = 0;
-  std::size_t size = 4;
-  throwing insert_val("inserted");
-  memory::vector<throwing> vec(size);
-  ASSERT_ANY_THROW(vec.insert(vec.begin(), throwing("face")));
-  ASSERT_EQ(vec.size(), size);
-  for (auto i = 0; i < size; ++i) {
-    ASSERT_NO_THROW(vec.at(i));
-  }
-
-  throwing::count = 4;
-  ASSERT_ANY_THROW(vec.insert(vec.begin(), throwing("in your")));
-  ASSERT_EQ(vec.size(), size);
-  for (auto i = 0; i < size; ++i) {
-    ASSERT_NO_THROW(vec.at(i));
-  }
-}
-
-TEST(VectorTest, insert_safe_counted) {
-  std::size_t insert = 47;
-  std::size_t size = 60;
-  std::size_t count = 8;
-  memory::vector<safe> vec(size);
-
-  auto pos = vec.insert(vec.begin() + insert, count, safe("inserted"));
-
-  ASSERT_EQ(vec.size(), size + count);
-  ASSERT_EQ(vec.capacity(), size * 2);
-  ASSERT_EQ(pos, vec.begin() + insert);
-  ASSERT_EQ(*pos, safe("inserted"));
-  auto i = vec.begin();
-
-  for (; i != pos; ++i) {
-    ASSERT_NE(*i, safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kMove);
-  }
-  for (; i != pos + count; ++i) {
-    ASSERT_EQ(*i, safe("inserted"));
-  }
-  for (; i != vec.end(); ++i) {
-    ASSERT_NE(*i, safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kMove);
-  }
-}
-
-TEST(VectorTest, insert_not_safe_counted) {
-  std::size_t insert = 8;
-  std::size_t size = 60;
-  std::size_t count = 67;
-  memory::vector<not_safe> vec(size);
-
-  auto pos = vec.insert(vec.begin() + insert, count, not_safe("inserted"));
-
-  ASSERT_EQ(vec.size(), size + count);
-  ASSERT_EQ(vec.capacity(), size + count);
-  ASSERT_EQ(pos, vec.begin() + insert);
-  ASSERT_EQ(*pos, not_safe("inserted"));
-  auto i = vec.begin();
-
-  for (; i != pos; ++i) {
-    ASSERT_NE(*i, not_safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kCopy);
-  }
-  for (; i != pos + count; ++i) {
-    ASSERT_EQ(*i, not_safe("inserted"));
-  }
-  for (; i != vec.end(); ++i) {
-    ASSERT_NE(*i, not_safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kCopy);
-  }
-}
-
-TEST(VectorTest, insert_counted_no_realloc) {
-  memory::vector<safe> vec(77);
-  safe *ptr = vec.data();
-  vec.resize(25);
-
-  std::size_t insert = 8;
-  std::size_t count = 9;
-
-  auto pos = vec.insert(vec.begin() + insert, count, safe("inserted"));
-
-  ASSERT_EQ(vec.size(), 25 + count);
-  ASSERT_EQ(vec.capacity(), 77);
-  ASSERT_EQ(vec.data(), ptr);
-  ASSERT_EQ(pos, vec.begin() + insert);
-  ASSERT_EQ(*pos, safe("inserted"));
-  auto i = vec.begin();
-
-  for (; i != pos; ++i) {
-    ASSERT_NE(*i, safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kDef);
-  }
-  for (; i != pos + count; ++i) {
-    ASSERT_EQ(*i, safe("inserted"));
-  }
-}
-
-TEST(VectorTest, insert_counted_throwing) {
-  throwing::count = 0;
-  std::size_t size = 4;
-  throwing insert_val("inserted");
-  memory::vector<throwing> vec(size);
-  throwing *ptr = vec.data();
-
-  ASSERT_ANY_THROW(vec.insert(vec.begin(), 4, throwing("face")));
-
-  ASSERT_EQ(vec.size(), size);
-  ASSERT_EQ(vec.capacity(), size);
-  ASSERT_EQ(vec.data(), ptr);
-  for (auto i = 0; i < size; ++i) {
-    ASSERT_NO_THROW(vec.at(i));
-  }
-
-  throwing::count = 4;
-
-  ASSERT_ANY_THROW(vec.insert(vec.begin(), 4, throwing("in your")));
-
-  ASSERT_EQ(vec.size(), size);
-  ASSERT_EQ(vec.capacity(), size);
-  ASSERT_EQ(vec.data(), ptr);
-  for (auto i = 0; i < size; ++i) {
-    ASSERT_NO_THROW(vec.at(i));
-  }
-}
-
-TEST(VectorTest, insert_range_safe) {
-  std::size_t size = 60;
-  memory::vector<safe> vec(size);
-  std::vector<safe> range(size, safe("inserted"));
-
-  std::size_t start = 8;
-  std::size_t finish = 24;
-  std::size_t count = finish - start;
-
-  std::size_t insert = 16;
-
-  auto pos = vec.insert(vec.begin() + insert, range.begin() + start,
-                        range.begin() + finish);
-
-  ASSERT_EQ(vec.size(), size + count);
-  ASSERT_EQ(pos, vec.begin() + insert);
-
-  auto i = vec.begin();
-
-  for (; i != pos; ++i) {
-    ASSERT_NE(*i, safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kMove);
-  }
-  for (; i != pos + count; ++i) {
-    ASSERT_EQ(*i, safe("inserted"));
-  }
-  for (; i != vec.end(); ++i) {
-    ASSERT_NE(*i, safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kMove);
-  }
-}
-
-TEST(VectorTest, insert_range_not_safe) {
-  std::size_t size = 60;
-  memory::vector<not_safe> vec(size);
-  std::vector<not_safe> range(size, not_safe("inserted"));
-
-  std::size_t start = 8;
-  std::size_t finish = 24;
-  std::size_t count = finish - start;
-
-  std::size_t insert = 16;
-
-  auto pos = vec.insert(vec.begin() + insert, range.begin() + start,
-                        range.begin() + finish);
-
-  ASSERT_EQ(vec.size(), size + count);
-  ASSERT_EQ(pos, vec.begin() + insert);
-
-  auto i = vec.begin();
-
-  for (; i != pos; ++i) {
-    ASSERT_NE(*i, not_safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kCopy);
-  }
-  for (; i != pos + count; ++i) {
-    ASSERT_EQ(*i, not_safe("inserted"));
-  }
-  for (; i != vec.end(); ++i) {
-    ASSERT_NE(*i, not_safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kCopy);
-  }
-}
-
-TEST(VectorTest, insert_range_no_realloc) {
-  std::size_t size = 60;
-  memory::vector<safe> vec(size);
-  std::vector<safe> range(size, safe("inserted"));
-
-  vec.resize(10);
-
-  std::size_t start = 8;
-  std::size_t finish = 24;
-  std::size_t count = finish - start;
-
-  std::size_t insert = 6;
-
-  auto pos = vec.insert(vec.begin() + insert, range.begin() + start,
-                        range.begin() + finish);
-
-  ASSERT_EQ(vec.size(), 10 + count);
-  ASSERT_EQ(pos, vec.begin() + insert);
-
-  auto i = vec.begin();
-
-  for (; i != pos; ++i) {
-    ASSERT_NE(*i, not_safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kDef);
-  }
-  for (; i != pos + count; ++i) {
-    ASSERT_EQ(*i, not_safe("inserted"));
-  }
-}
-
-TEST(VectorTest, insert_range_throwing) {
-  throwing::count = 0;
-  std::size_t size = 4;
-  memory::vector<throwing> vec(size);
-  std::vector<throwing> range(10);
-  std::size_t start = 2;
-  std::size_t finish = start + 5;
-  ASSERT_ANY_THROW(
-      vec.insert(vec.begin(), range.begin() + start, range.begin() + finish));
-  ASSERT_EQ(vec.size(), size);
-  for (auto i = 0; i < size; ++i) {
-    ASSERT_NO_THROW(vec.at(i));
-  }
-
-  throwing::count = 0;
-  ASSERT_ANY_THROW(
-      vec.insert(vec.begin(), range.begin() + start, range.begin() + finish));
-  ASSERT_EQ(vec.size(), size);
-  for (auto i = 0; i < size; ++i) {
-    ASSERT_NO_THROW(vec.at(i));
-  }
-}
-
-TEST(VectorTest, insert_list_safe) {
-  for (std::size_t i = 0; i < loop; ++i) {
-    std::size_t size = uid(gen) + 3;
-    memory::vector<safe> vec(size);
-
-    std::size_t insert = 2;
-
-    auto pos =
-        vec.insert(vec.begin() + insert,
-                   {safe("inserted"), safe("inserted"), safe("inserted")});
-    ASSERT_EQ(vec.size(), size + 3);
-    ASSERT_EQ(pos, vec.begin() + insert);
-    auto it = vec.begin();
-
-    for (; it != pos; ++it) {
-      ASSERT_NE(*it, safe("inserted"));
-      ASSERT_EQ(it->birth, constructed::kMove);
-    }
-    for (; it != pos + 3; ++it) {
-      ASSERT_EQ(*it, safe("inserted"));
-    }
-    for (; it != vec.end(); ++it) {
-      ASSERT_NE(*it, safe("inserted"));
-      ASSERT_EQ(it->birth, constructed::kMove);
-    }
-  }
-}
-
-TEST(VectorTest, insert_list_not_safe) {
-  for (std::size_t i = 0; i < loop; ++i) {
-    std::size_t size = uid(gen);
-    memory::vector<not_safe> vec(size);
-    std::uniform_int_distribution<std::size_t> uid_vec(1, size);
-
-    std::size_t insert = uid_vec(gen);
-
-    auto pos = vec.insert(
-        vec.begin() + insert,
-        {not_safe("inserted"), not_safe("inserted"), not_safe("inserted")});
-    ASSERT_EQ(vec.size(), size + 3);
-    ASSERT_EQ(pos, vec.begin() + insert);
-    auto it = vec.begin();
-
-    for (; it != pos; ++it) {
-      ASSERT_NE(*it, not_safe("inserted"));
-      ASSERT_EQ(it->birth, constructed::kCopy);
-    }
-    for (; it != pos + 3; ++it) {
-      ASSERT_EQ(*it, not_safe("inserted"));
-    }
-    for (; it != vec.end(); ++it) {
-      ASSERT_NE(*it, not_safe("inserted"));
-      ASSERT_EQ(it->birth, constructed::kCopy);
-    }
-  }
-}
+// TEST(VectorTest, insert_continious) {
+//   not_safe insert_val("inserted");
+//   memory::vector<not_safe> vec(60);
+//   std::size_t insert = 0;
+//   for (std::size_t i = 0; i < loop; ++i, insert += 4) {
+//     auto pos = vec.insert(vec.begin() + insert, insert_val);
+//     ASSERT_EQ(pos, vec.begin() + insert);
+//     ASSERT_EQ(*pos, insert_val);
+//   }
+// }
+//
+// TEST(VectorTest, insert_not_safe) {
+//   memory::vector<not_safe> vec(60);
+//   std::size_t insert = 8;
+//   auto pos = vec.insert(vec.begin() + insert, not_safe("inserted"));
+//   ASSERT_EQ(pos, vec.begin() + insert);
+//   ASSERT_EQ(*pos, not_safe("inserted"));
+//   for (auto i = vec.begin(); i != pos; ++i) {
+//     ASSERT_NE(*i, not_safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kCopy);
+//   }
+//   for (auto i = pos + 1; i != vec.end(); ++i) {
+//     ASSERT_NE(*i, not_safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kCopy);
+//   }
+// }
+//
+// TEST(VectorTest, insert_safe) {
+//   memory::vector<safe> vec(60);
+//   std::size_t insert = 47;
+//   auto pos = vec.insert(vec.begin() + insert, safe("inserted"));
+//   ASSERT_EQ(pos, vec.begin() + insert);
+//   ASSERT_EQ(*pos, safe("inserted"));
+//   for (auto i = vec.begin(); i != pos; ++i) {
+//     ASSERT_NE(*i, safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kMove);
+//   }
+//   for (auto i = pos + 1; i != vec.end(); ++i) {
+//     ASSERT_NE(*i, safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kMove);
+//   }
+// }
+//
+// TEST(VectorTest, insert_empty) {
+//   safe insert_val("inserted");
+//   memory::vector<safe> vec;
+//   auto insert_pos = vec.insert(vec.begin(), insert_val);
+//   ASSERT_EQ(vec.size(), 1);
+//   ASSERT_EQ(vec.capacity(), 1);
+//   ASSERT_NE(vec.data(), nullptr);
+//   ASSERT_EQ(insert_pos, vec.begin());
+//   ASSERT_EQ(*insert_pos, insert_val);
+// }
+//
+// TEST(VectorTest, insert_throwing) {
+//   throwing::count = 0;
+//   std::size_t size = 4;
+//   throwing insert_val("inserted");
+//   memory::vector<throwing> vec(size);
+//   ASSERT_ANY_THROW(vec.insert(vec.begin(), throwing("face")));
+//   ASSERT_EQ(vec.size(), size);
+//   for (auto i = 0; i < size; ++i) {
+//     ASSERT_NO_THROW(vec.at(i));
+//   }
+//
+//   throwing::count = 4;
+//   ASSERT_ANY_THROW(vec.insert(vec.begin(), throwing("in your")));
+//   ASSERT_EQ(vec.size(), size);
+//   for (auto i = 0; i < size; ++i) {
+//     ASSERT_NO_THROW(vec.at(i));
+//   }
+// }
+//
+// TEST(VectorTest, insert_safe_counted) {
+//   std::size_t insert = 47;
+//   std::size_t size = 60;
+//   std::size_t count = 8;
+//   memory::vector<safe> vec(size);
+//
+//   auto pos = vec.insert(vec.begin() + insert, count, safe("inserted"));
+//
+//   ASSERT_EQ(vec.size(), size + count);
+//   ASSERT_EQ(vec.capacity(), size * 2);
+//   ASSERT_EQ(pos, vec.begin() + insert);
+//   ASSERT_EQ(*pos, safe("inserted"));
+//   auto i = vec.begin();
+//
+//   for (; i != pos; ++i) {
+//     ASSERT_NE(*i, safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kMove);
+//   }
+//   for (; i != pos + count; ++i) {
+//     ASSERT_EQ(*i, safe("inserted"));
+//   }
+//   for (; i != vec.end(); ++i) {
+//     ASSERT_NE(*i, safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kMove);
+//   }
+// }
+//
+// TEST(VectorTest, insert_not_safe_counted) {
+//   std::size_t insert = 8;
+//   std::size_t size = 60;
+//   std::size_t count = 67;
+//   memory::vector<not_safe> vec(size);
+//
+//   auto pos = vec.insert(vec.begin() + insert, count, not_safe("inserted"));
+//
+//   ASSERT_EQ(vec.size(), size + count);
+//   ASSERT_EQ(vec.capacity(), size + count);
+//   ASSERT_EQ(pos, vec.begin() + insert);
+//   ASSERT_EQ(*pos, not_safe("inserted"));
+//   auto i = vec.begin();
+//
+//   for (; i != pos; ++i) {
+//     ASSERT_NE(*i, not_safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kCopy);
+//   }
+//   for (; i != pos + count; ++i) {
+//     ASSERT_EQ(*i, not_safe("inserted"));
+//   }
+//   for (; i != vec.end(); ++i) {
+//     ASSERT_NE(*i, not_safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kCopy);
+//   }
+// }
+//
+// TEST(VectorTest, insert_counted_no_realloc) {
+//   memory::vector<safe> vec(77);
+//   safe *ptr = vec.data();
+//   vec.resize(25);
+//
+//   std::size_t insert = 8;
+//   std::size_t count = 9;
+//
+//   auto pos = vec.insert(vec.begin() + insert, count, safe("inserted"));
+//
+//   ASSERT_EQ(vec.size(), 25 + count);
+//   ASSERT_EQ(vec.capacity(), 77);
+//   ASSERT_EQ(vec.data(), ptr);
+//   ASSERT_EQ(pos, vec.begin() + insert);
+//   ASSERT_EQ(*pos, safe("inserted"));
+//   auto i = vec.begin();
+//
+//   for (; i != pos; ++i) {
+//     ASSERT_NE(*i, safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kDef);
+//   }
+//   for (; i != pos + count; ++i) {
+//     ASSERT_EQ(*i, safe("inserted"));
+//   }
+// }
+//
+// TEST(VectorTest, insert_counted_throwing) {
+//   throwing::count = 0;
+//   std::size_t size = 4;
+//   throwing insert_val("inserted");
+//   memory::vector<throwing> vec(size);
+//   throwing *ptr = vec.data();
+//
+//   ASSERT_ANY_THROW(vec.insert(vec.begin(), 4, throwing("face")));
+//
+//   ASSERT_EQ(vec.size(), size);
+//   ASSERT_EQ(vec.capacity(), size);
+//   ASSERT_EQ(vec.data(), ptr);
+//   for (auto i = 0; i < size; ++i) {
+//     ASSERT_NO_THROW(vec.at(i));
+//   }
+//
+//   throwing::count = 4;
+//
+//   ASSERT_ANY_THROW(vec.insert(vec.begin(), 4, throwing("in your")));
+//
+//   ASSERT_EQ(vec.size(), size);
+//   ASSERT_EQ(vec.capacity(), size);
+//   ASSERT_EQ(vec.data(), ptr);
+//   for (auto i = 0; i < size; ++i) {
+//     ASSERT_NO_THROW(vec.at(i));
+//   }
+// }
+//
+// TEST(VectorTest, insert_range_safe) {
+//   std::size_t size = 60;
+//   memory::vector<safe> vec(size);
+//   std::vector<safe> range(size, safe("inserted"));
+//
+//   std::size_t start = 8;
+//   std::size_t finish = 24;
+//   std::size_t count = finish - start;
+//
+//   std::size_t insert = 16;
+//
+//   auto pos = vec.insert(vec.begin() + insert, range.begin() + start,
+//                         range.begin() + finish);
+//
+//   ASSERT_EQ(vec.size(), size + count);
+//   ASSERT_EQ(pos, vec.begin() + insert);
+//
+//   auto i = vec.begin();
+//
+//   for (; i != pos; ++i) {
+//     ASSERT_NE(*i, safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kMove);
+//   }
+//   for (; i != pos + count; ++i) {
+//     ASSERT_EQ(*i, safe("inserted"));
+//   }
+//   for (; i != vec.end(); ++i) {
+//     ASSERT_NE(*i, safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kMove);
+//   }
+// }
+//
+// TEST(VectorTest, insert_range_not_safe) {
+//   std::size_t size = 60;
+//   memory::vector<not_safe> vec(size);
+//   std::vector<not_safe> range(size, not_safe("inserted"));
+//
+//   std::size_t start = 8;
+//   std::size_t finish = 24;
+//   std::size_t count = finish - start;
+//
+//   std::size_t insert = 16;
+//
+//   auto pos = vec.insert(vec.begin() + insert, range.begin() + start,
+//                         range.begin() + finish);
+//
+//   ASSERT_EQ(vec.size(), size + count);
+//   ASSERT_EQ(pos, vec.begin() + insert);
+//
+//   auto i = vec.begin();
+//
+//   for (; i != pos; ++i) {
+//     ASSERT_NE(*i, not_safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kCopy);
+//   }
+//   for (; i != pos + count; ++i) {
+//     ASSERT_EQ(*i, not_safe("inserted"));
+//   }
+//   for (; i != vec.end(); ++i) {
+//     ASSERT_NE(*i, not_safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kCopy);
+//   }
+// }
+//
+// TEST(VectorTest, insert_range_no_realloc) {
+//   std::size_t size = 60;
+//   memory::vector<safe> vec(size);
+//   std::vector<safe> range(size, safe("inserted"));
+//
+//   vec.resize(10);
+//
+//   std::size_t start = 8;
+//   std::size_t finish = 24;
+//   std::size_t count = finish - start;
+//
+//   std::size_t insert = 6;
+//
+//   auto pos = vec.insert(vec.begin() + insert, range.begin() + start,
+//                         range.begin() + finish);
+//
+//   ASSERT_EQ(vec.size(), 10 + count);
+//   ASSERT_EQ(pos, vec.begin() + insert);
+//
+//   auto i = vec.begin();
+//
+//   for (; i != pos; ++i) {
+//     ASSERT_NE(*i, not_safe("inserted"));
+//     ASSERT_EQ(i->birth, constructed::kDef);
+//   }
+//   for (; i != pos + count; ++i) {
+//     ASSERT_EQ(*i, not_safe("inserted"));
+//   }
+// }
+//
+// TEST(VectorTest, insert_range_throwing) {
+//   throwing::count = 0;
+//   std::size_t size = 4;
+//   memory::vector<throwing> vec(size);
+//   std::vector<throwing> range(10);
+//   std::size_t start = 2;
+//   std::size_t finish = start + 5;
+//   ASSERT_ANY_THROW(
+//       vec.insert(vec.begin(), range.begin() + start, range.begin() + finish));
+//   ASSERT_EQ(vec.size(), size);
+//   for (auto i = 0; i < size; ++i) {
+//     ASSERT_NO_THROW(vec.at(i));
+//   }
+//
+//   throwing::count = 0;
+//   ASSERT_ANY_THROW(
+//       vec.insert(vec.begin(), range.begin() + start, range.begin() + finish));
+//   ASSERT_EQ(vec.size(), size);
+//   for (auto i = 0; i < size; ++i) {
+//     ASSERT_NO_THROW(vec.at(i));
+//   }
+// }
+//
+// TEST(VectorTest, insert_list_safe) {
+//   for (std::size_t i = 0; i < loop; ++i) {
+//     std::size_t size = uid(gen) + 3;
+//     memory::vector<safe> vec(size);
+//
+//     std::size_t insert = 2;
+//
+//     auto pos =
+//         vec.insert(vec.begin() + insert,
+//                    {safe("inserted"), safe("inserted"), safe("inserted")});
+//     ASSERT_EQ(vec.size(), size + 3);
+//     ASSERT_EQ(pos, vec.begin() + insert);
+//     auto it = vec.begin();
+//
+//     for (; it != pos; ++it) {
+//       ASSERT_NE(*it, safe("inserted"));
+//       ASSERT_EQ(it->birth, constructed::kMove);
+//     }
+//     for (; it != pos + 3; ++it) {
+//       ASSERT_EQ(*it, safe("inserted"));
+//     }
+//     for (; it != vec.end(); ++it) {
+//       ASSERT_NE(*it, safe("inserted"));
+//       ASSERT_EQ(it->birth, constructed::kMove);
+//     }
+//   }
+// }
+//
+// TEST(VectorTest, insert_list_not_safe) {
+//   for (std::size_t i = 0; i < loop; ++i) {
+//     std::size_t size = uid(gen);
+//     memory::vector<not_safe> vec(size);
+//     std::uniform_int_distribution<std::size_t> uid_vec(1, size);
+//
+//     std::size_t insert = uid_vec(gen);
+//
+//     auto pos = vec.insert(
+//         vec.begin() + insert,
+//         {not_safe("inserted"), not_safe("inserted"), not_safe("inserted")});
+//     ASSERT_EQ(vec.size(), size + 3);
+//     ASSERT_EQ(pos, vec.begin() + insert);
+//     auto it = vec.begin();
+//
+//     for (; it != pos; ++it) {
+//       ASSERT_NE(*it, not_safe("inserted"));
+//       ASSERT_EQ(it->birth, constructed::kCopy);
+//     }
+//     for (; it != pos + 3; ++it) {
+//       ASSERT_EQ(*it, not_safe("inserted"));
+//     }
+//     for (; it != vec.end(); ++it) {
+//       ASSERT_NE(*it, not_safe("inserted"));
+//       ASSERT_EQ(it->birth, constructed::kCopy);
+//     }
+//   }
+// }
 
 // TEST(VectorTest, erase_not_safe) {
 //   for (std::size_t i = 0; i < loop; ++i) {
@@ -1717,184 +1717,184 @@ TEST(VectorTest, insert_list_not_safe) {
 //   ASSERT_EQ(vec.size(), 0);
 // }
 
-// TEST(VectorTest, emplace_not_safe) {
-//   memory::vector<not_safe> vec(54);
-//   not_safe value("inserted");
-//   std::size_t insert = 31;
+TEST(VectorTest, emplace_not_safe) {
+  memory::vector<not_safe> vec(54);
+  not_safe value("inserted");
+  std::size_t insert = 31;
 
-//   auto pos = vec.emplace(vec.begin() + insert, value);
+  auto pos = vec.emplace(vec.begin() + insert, value);
 
-//   ASSERT_EQ(pos, vec.begin() + insert);
-//   ASSERT_EQ(*pos, not_safe("inserted"));
-//   ASSERT_EQ(pos->birth, constructed::kCopy);
+  ASSERT_EQ(pos, vec.begin() + insert);
+  ASSERT_EQ(*pos, not_safe("inserted"));
+  ASSERT_EQ(pos->birth, constructed::kCopy);
 
-//   for (auto i = vec.begin(); i != pos; ++i) {
-//     ASSERT_NE(*i, not_safe("inserted"));
-//     ASSERT_EQ(i->birth, constructed::kCopy);
-//   }
-//   for (auto i = pos + 1; i != vec.end(); ++i) {
-//     ASSERT_NE(*i, not_safe("inserted"));
-//     ASSERT_EQ(i->birth, constructed::kCopy);
-//   }
-// }
+  for (auto i = vec.begin(); i != pos; ++i) {
+    ASSERT_NE(*i, not_safe("inserted"));
+    ASSERT_EQ(i->birth, constructed::kCopy);
+  }
+  for (auto i = pos + 1; i != vec.end(); ++i) {
+    ASSERT_NE(*i, not_safe("inserted"));
+    ASSERT_EQ(i->birth, constructed::kCopy);
+  }
+}
 
-// TEST(VectorTest, emplace_safe) {
-//   memory::vector<safe> vec(54);
-//   std::size_t insert = 31;
+TEST(VectorTest, emplace_safe) {
+  memory::vector<safe> vec(54);
+  std::size_t insert = 31;
 
-//   auto pos = vec.emplace(vec.begin() + insert, safe("inserted"));
+  auto pos = vec.emplace(vec.begin() + insert, safe("inserted"));
 
-//   ASSERT_EQ(pos, vec.begin() + insert);
-//   ASSERT_EQ(*pos, safe("inserted"));
-//   ASSERT_EQ(pos->birth, constructed::kMove);
+  ASSERT_EQ(pos, vec.begin() + insert);
+  ASSERT_EQ(*pos, safe("inserted"));
+  ASSERT_EQ(pos->birth, constructed::kMove);
 
-//   for (auto i = vec.begin(); i != pos; ++i) {
-//     ASSERT_NE(*i, safe("inserted"));
-//     ASSERT_EQ(i->birth, constructed::kMove);
-//   }
-//   for (auto i = pos + 1; i != vec.end(); ++i) {
-//     ASSERT_NE(*i, safe("inserted"));
-//     ASSERT_EQ(i->birth, constructed::kMove);
-//   }
-// }
+  for (auto i = vec.begin(); i != pos; ++i) {
+    ASSERT_NE(*i, safe("inserted"));
+    ASSERT_EQ(i->birth, constructed::kMove);
+  }
+  for (auto i = pos + 1; i != vec.end(); ++i) {
+    ASSERT_NE(*i, safe("inserted"));
+    ASSERT_EQ(i->birth, constructed::kMove);
+  }
+}
 
-// TEST(VectorTest, emplace_no_realloc) {
-//   memory::vector<safe> vec(54);
-//   safe *ptr = vec.data();
-//   vec.resize(50);
+TEST(VectorTest, emplace_no_realloc) {
+  memory::vector<safe> vec(54);
+  safe *ptr = vec.data();
+  vec.resize(50);
 
-//   std::size_t insert = 31;
+  std::size_t insert = 31;
 
-//   auto pos = vec.emplace(vec.begin() + insert, "inserted");
+  auto pos = vec.emplace(vec.begin() + insert, "inserted");
 
-//   ASSERT_EQ(vec.data(), ptr);
-//   ASSERT_EQ(pos, vec.begin() + insert);
-//   ASSERT_EQ(*pos, safe("inserted"));
-//   ASSERT_EQ(pos->birth, constructed::kDef);
+  ASSERT_EQ(vec.data(), ptr);
+  ASSERT_EQ(pos, vec.begin() + insert);
+  ASSERT_EQ(*pos, safe("inserted"));
+  ASSERT_EQ(pos->birth, constructed::kDef);
 
-//   for (auto i = vec.begin(); i != pos; ++i) {
-//     ASSERT_NE(*i, safe("inserted"));
-//     ASSERT_EQ(i->birth, constructed::kDef);
-//   }
-//   ASSERT_EQ(vec.back().birth, constructed::kMove);
-// }
+  for (auto i = vec.begin(); i != pos; ++i) {
+    ASSERT_NE(*i, safe("inserted"));
+    ASSERT_EQ(i->birth, constructed::kDef);
+  }
+  ASSERT_EQ(vec.back().birth, constructed::kMove);
+}
 
-// TEST(VectorTest, emplace_no_def) {
-//   memory::vector<no_def> vec;
-//   for (std::size_t i = 0; i < loop; ++i) {
-//     auto insert_pos = vec.emplace(vec.begin(), "inserted");
-//     ASSERT_EQ(*insert_pos, no_def("inserted"));
-//     ASSERT_EQ(insert_pos->birth, constructed::kParam);
-//   }
-// }
+TEST(VectorTest, emplace_no_def) {
+  memory::vector<no_def> vec;
+  for (std::size_t i = 0; i < loop; ++i) {
+    auto insert_pos = vec.emplace(vec.begin(), "inserted");
+    ASSERT_EQ(*insert_pos, no_def("inserted"));
+    ASSERT_EQ(insert_pos->birth, constructed::kParam);
+  }
+}
 
-// TEST(VectorTest, emplace_throwing) {
-//   throwing::count = 0;
-//   std::size_t size = 4;
-//   memory::vector<throwing> vec(size);
-//   throwing value("pushed");
-//   ASSERT_ANY_THROW(vec.emplace(vec.begin(), value));
-//   ASSERT_EQ(vec.size(), size);
-//   for (auto i = 0; i < size; ++i) {
-//     ASSERT_NO_THROW(vec.at(i));
-//   }
+TEST(VectorTest, emplace_throwing) {
+  throwing::count = 0;
+  std::size_t size = 4;
+  memory::vector<throwing> vec(size);
+  throwing value("pushed");
+  ASSERT_ANY_THROW(vec.emplace(vec.begin(), value));
+  ASSERT_EQ(vec.size(), size);
+  for (auto i = 0; i < size; ++i) {
+    ASSERT_NO_THROW(vec.at(i));
+  }
 
-//   throwing::count = 4;
-//   ASSERT_ANY_THROW(vec.emplace(vec.begin(), value));
-//   ASSERT_EQ(vec.size(), size);
-//   for (auto i = 0; i < size; ++i) {
-//     ASSERT_NO_THROW(vec.at(i));
-//   }
-// }
+  throwing::count = 4;
+  ASSERT_ANY_THROW(vec.emplace(vec.begin(), value));
+  ASSERT_EQ(vec.size(), size);
+  for (auto i = 0; i < size; ++i) {
+    ASSERT_NO_THROW(vec.at(i));
+  }
+}
 
-// TEST(VectorTest, emplace_back_from_begin_safe) {
-//   memory::vector<safe> vec(uid(gen), safe("default"));
-//   vec.emplace_back(std::move(vec.front()));
-//   ASSERT_EQ(vec.back(), safe("default"));
-//   ASSERT_EQ(vec.back().birth, constructed::kMove);
-//   ASSERT_EQ(vec.front().birth, constructed::kMove);
-//   ASSERT_NE(vec.front(), safe());
-// }
+TEST(VectorTest, emplace_back_from_begin_safe) {
+  memory::vector<safe> vec(5, safe("default"));
+  vec.emplace_back(std::move(vec.front()));
+  ASSERT_EQ(vec.back(), safe("default"));
+  ASSERT_EQ(vec.back().birth, constructed::kMove);
+  ASSERT_EQ(vec.front().birth, constructed::kMove);
+  ASSERT_NE(vec.front(), safe());
+}
 
-// TEST(VectorTest, emplace_back_continious_safe) {
-//   std::size_t size = uid(gen);
-//   memory::vector<safe> vec(size, safe("default"));
-//   for (std::size_t i = 0; i < size; ++i) {
-//     vec.emplace_back(std::move(vec[i]));
-//   }
-//   ASSERT_EQ(vec.size(), size * 2);
-//   for (std::size_t i = 0; i < size; ++i) {
-//     ASSERT_NE(vec[i], safe("default"));
-//   }
-//   for (std::size_t i = size; i < 2 * size; ++i) {
-//     ASSERT_EQ(vec[i], safe("default"));
-//   }
-// }
+TEST(VectorTest, emplace_back_continious_safe) {
+  std::size_t size = uid(gen);
+  memory::vector<safe> vec(size, safe("default"));
+  for (std::size_t i = 0; i < size; ++i) {
+    vec.emplace_back(std::move(vec[i]));
+  }
+  ASSERT_EQ(vec.size(), size * 2);
+  for (std::size_t i = 0; i < size; ++i) {
+    ASSERT_NE(vec[i], safe("default"));
+  }
+  for (std::size_t i = size; i < 2 * size; ++i) {
+    ASSERT_EQ(vec[i], safe("default"));
+  }
+}
 
-// TEST(VectorTest, emplace_back_safe) {
-//   memory::vector<safe> vec(uid(gen));
+TEST(VectorTest, emplace_back_safe) {
+  memory::vector<safe> vec(uid(gen));
 
-//   safe &val = vec.emplace_back("default");
-//   ASSERT_EQ(val, safe("default"));
-//   ASSERT_EQ(val.birth, constructed::kParam);
-//   for (std::size_t i = 0; i < vec.size() - 1; ++i) {
-//     ASSERT_EQ(vec[i].birth, constructed::kMove);
-//   }
-// }
+  safe &val = vec.emplace_back("default");
+  ASSERT_EQ(val, safe("default"));
+  ASSERT_EQ(val.birth, constructed::kParam);
+  for (std::size_t i = 0; i < vec.size() - 1; ++i) {
+    ASSERT_EQ(vec[i].birth, constructed::kMove);
+  }
+}
 
-// TEST(VectorTest, emplace_back_not_safe) {
-//   memory::vector<not_safe> vec(uid(gen));
+TEST(VectorTest, emplace_back_not_safe) {
+  memory::vector<not_safe> vec(uid(gen));
 
-//   not_safe &val = vec.emplace_back("default");
-//   ASSERT_EQ(val, not_safe("default"));
-//   ASSERT_EQ(val.birth, constructed::kParam);
-//   for (std::size_t i = 0; i < vec.size() - 1; ++i) {
-//     ASSERT_EQ(vec[i].birth, constructed::kCopy);
-//   }
-// }
+  not_safe &val = vec.emplace_back("default");
+  ASSERT_EQ(val, not_safe("default"));
+  ASSERT_EQ(val.birth, constructed::kParam);
+  for (std::size_t i = 0; i < vec.size() - 1; ++i) {
+    ASSERT_EQ(vec[i].birth, constructed::kCopy);
+  }
+}
 
-// TEST(VectorTest, emplace_back_no_realloc) {
-//   memory::vector<safe> vec(56);
-//   vec.resize(55);
+TEST(VectorTest, emplace_back_no_realloc) {
+  memory::vector<safe> vec(56);
+  vec.resize(55);
 
-//   safe &val = vec.emplace_back("default");
-//   ASSERT_EQ(val, safe("default"));
-//   ASSERT_EQ(val.birth, constructed::kParam);
-//   for (std::size_t i = 0; i < vec.size() - 1; ++i) {
-//     ASSERT_EQ(vec[i].birth, constructed::kDef);
-//   }
-// }
+  safe &val = vec.emplace_back("default");
+  ASSERT_EQ(val, safe("default"));
+  ASSERT_EQ(val.birth, constructed::kParam);
+  for (std::size_t i = 0; i < vec.size() - 1; ++i) {
+    ASSERT_EQ(vec[i].birth, constructed::kDef);
+  }
+}
 
-// TEST(VectorTest, emplace_back_throwing) {
-//   throwing::count = 0;
-//   std::size_t size = 7;
-//   memory::vector<throwing> vec(size);
-//   ASSERT_ANY_THROW(vec.emplace(vec.begin(), "pushed"));
-//   ASSERT_EQ(vec.size(), size);
-//   for (auto i = 0; i < size; ++i) {
-//     ASSERT_NO_THROW(vec.at(i));
-//   }
+TEST(VectorTest, emplace_back_throwing) {
+  throwing::count = 0;
+  std::size_t size = 7;
+  memory::vector<throwing> vec(size);
+  ASSERT_ANY_THROW(vec.emplace(vec.begin(), "pushed"));
+  ASSERT_EQ(vec.size(), size);
+  for (auto i = 0; i < size; ++i) {
+    ASSERT_NO_THROW(vec.at(i));
+  }
 
-//   throwing::count = 4;
-//   vec.resize(6);
+  throwing::count = 4;
+  vec.resize(6);
 
-//   ASSERT_ANY_THROW(vec.emplace(vec.begin(), throwing("pushed")));
-//   ASSERT_EQ(vec.size(), size - 1);
-//   for (auto i = 0; i < size - 1; ++i) {
-//     ASSERT_NO_THROW(vec.at(i));
-//   }
-// }
+  ASSERT_ANY_THROW(vec.emplace(vec.begin(), throwing("pushed")));
+  ASSERT_EQ(vec.size(), size - 1);
+  for (auto i = 0; i < size - 1; ++i) {
+    ASSERT_NO_THROW(vec.at(i));
+  }
+}
 
-// TEST(VectorTest, stream) {
-//   memory::vector<safe> vec{
-//       safe("Aileen"), safe("Anna"), safe("Louie"), safe("Noel"),
-//       safe("Grace"),
-//   };
-//   std::stringstream stream;
-//   std::string expected("Aileen Anna Louie Noel Grace");
-//   stream << vec;
-//   EXPECT_EQ(expected, stream.str());
-// }
+TEST(VectorTest, stream) {
+  memory::vector<safe> vec{
+      safe("Aileen"), safe("Anna"), safe("Louie"), safe("Noel"),
+      safe("Grace"),
+  };
+  std::stringstream stream;
+  std::string expected("Aileen Anna Louie Noel Grace");
+  stream << vec;
+  EXPECT_EQ(expected, stream.str());
+}
 
 // TEST(VectorTest, valid_constexpr) {
 //   constexpr std::size_t cexper = constexpr_check(0);

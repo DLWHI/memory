@@ -10,6 +10,12 @@
 #include <type_traits>  // as name suggests
 #include <utility>      // std::forward, std::swap, std::move
 
+#if __cplusplus >= 202002L
+#define MEMORY_CPP20CONSTEXPR constexpr
+#else
+#define MEMORY_CPP20CONSTEXPR
+#endif  // 202002L
+
 namespace memory {
 // use it at your own risk
 //
@@ -73,7 +79,6 @@ class vector {
                    const Allocator& al = Allocator())
       : al_(al) {
     if constexpr (std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>::value) {
-      std::cout << "forward" << std::endl;
       size_ = cap_ = std::distance(first, last);
       ptr_ = alloc(size_);
       try {
@@ -83,7 +88,6 @@ class vector {
         throw;
       }
     } else {
-      std::cout << "not forward" << std::endl;
       size_ = cap_ = 0;
       ptr_ = nullptr;
       try {
@@ -274,7 +278,7 @@ class vector {
     }
     pointer p = ptr_;
     if (cap_ < count) {
-      p = create_buffer(count, value);
+      p = create_buffer(count, count, 0, value);
       swap_out_buffer(p, count);
     } else {
       pointer end = ptr_ + size_;
@@ -382,7 +386,8 @@ class vector {
     }
     size_ = count;
   }
-  //==============================================================================
+
+//==============================================================================
 
   // T must meet additional requirements of CopyInsertable
   constexpr void push_back(const_reference value) { emplace_back(value); }
@@ -505,23 +510,22 @@ class vector {
   template <typename... Args>
   constexpr iterator emplace(const_iterator pos, Args&&... args) {
     size_type ind = pos - begin();
-    T val(std::forward<Args>(args)...);
-    if (size_ >= cap_ || !std::is_nothrow_move_constructible<T>::value) {
-      pointer p = create_buffer(cap_*kCapMul + 1, ptr_, ptr_ + ind);
-      std::allocator_traits<Allocator>::construct(al_, p + ind);
-      if constexpr (std::is_nothrow_move_constructible<T>::value) {
-        move(p + ind + 1, ptr_ + ind, ptr_ + size_);  
-      } else {
-        try {
-          fill(p + ind + 1, ptr_ + ind, ptr_ + size_);
-        } catch (...) {
-          destroy(p, ind + 1);
-          dealloc(p, cap_*kCapMul + 1);
-          throw;
-        }
+    if (size_ >= cap_ || (!std::is_nothrow_move_constructible<T>::value && !std::is_nothrow_move_assignable<T>::value)) {
+      pointer p = create_buffer(cap_*kCapMul + 1, 1, ind, std::forward<Args>(args)...);
+      size_type copied = 0;
+      try {
+        safe_move(p, ptr_, ptr_ + ind);
+        copied = ind;
+        safe_move(p + ind + 1, ptr_ + ind, ptr_ + size_);
+      } catch (...) {
+        destroy(p + ind, 1);
+        destroy(p, copied);
+        dealloc(p, cap_*kCapMul + 1);
+        throw;
       }
       swap_out_buffer(p, cap_*kCapMul + 1);
    } else {
+      T val(std::forward<Args>(args)...);
       std::allocator_traits<Allocator>::construct(al_, ptr_ + size_, std::move(ptr_[size_ - 1]));
       for (size_type i = size_ - 1; i > ind; --i) {
         ptr_[i] = std::move(ptr_[i - 1]);
@@ -529,19 +533,20 @@ class vector {
       ptr_[ind] = std::move(val);
     }
     ++size_;
-    return begin();
+    return begin() + ind;
   }
 
   // T is EmplaceConstrutible from args and MoveInsertable into *this
   template <typename... Args>
   constexpr T& emplace_back(Args&&... args) {
     if (size_ >= cap_) {
-      T val(std::forward<Args>(args)...);
-      pointer p = create_buffer(cap_*kCapMul + 1);
+      pointer p = create_buffer(cap_*kCapMul + 1, 1, size_, std::forward<Args>(args)...);
       try {
-        std::allocator_traits<Allocator>::construct(al_, p + size_, std::move(val));
+        safe_move(p, ptr_, ptr_ + size_);
       } catch (...) {
+        destroy(p + size_, 1);
         dealloc(p, cap_*kCapMul + 1);
+        throw;
       }
       swap_out_buffer(p, cap_*kCapMul + 1);
     } else {
@@ -721,19 +726,11 @@ class vector {
   // T is MoveInsertable
   constexpr pointer create_buffer(size_type size) {
     pointer p = alloc(size);
-    if constexpr (std::is_nothrow_move_constructible<T>::value) {
-      move(p, ptr_, ptr_ + size_);
-    } else {
-      try {
-        if constexpr (std::is_copy_constructible<T>::value) {
-          fill(p, ptr_, ptr_ + size_);
-        } else {
-          move(p, ptr_, ptr_ + size_);
-        }
-      } catch(...) {
-        dealloc(p, size);
-        throw;
-      }
+    try {
+      safe_move(p, ptr_, ptr_ + size_);
+    } catch(...) {
+      dealloc(p, size);
+      throw;
     }
     return p;
   }
@@ -751,16 +748,28 @@ class vector {
     return p;
   }
 
-  // T is CopyConstructible
-  constexpr pointer create_buffer(size_type count, value_type value) {
-    pointer p = alloc(count);
+  // T is Emplaceonstructible
+  template <typename... Args>
+  constexpr pointer create_buffer(size_type size, size_type count, size_type ind, Args&&... args) {
+    pointer p = alloc(size);
     try {
-      construct(p, count, value);
+      construct(p + ind, count, std::forward<Args>(args)...);
     } catch(...) {
-      dealloc(p, count);
+      dealloc(p + ind, count);
       throw;
     }
     return p;
+  }
+
+  // T is MoveInsertable into *this
+  constexpr void safe_move(pointer dest, pointer first, pointer last) noexcept(std::is_nothrow_move_constructible<T>::value) {
+    if constexpr (std::is_nothrow_move_constructible<T>::value) {
+      move(dest, first, last);
+    } else if constexpr (std::is_copy_constructible<T>::value) {
+      fill(dest, first, last);
+    } else {
+      move(dest, first, last);
+    }
   }
 
   // No additional requirements on template types
