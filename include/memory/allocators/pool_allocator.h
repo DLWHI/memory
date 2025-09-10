@@ -75,7 +75,7 @@ class pool_allocator {
     if (!trace_->ref_count) {
       for (uint8_t *p = state(); p != pool_; ++p) {
       if (*p) {
-        ++trace_->ref_count;
+        operator delete(trace_);
         throw std::runtime_error("Memory leak detected: attempting to destroy pool allocator that has memory being used and not dealloc'd'");  // AOAOOOAOAOAOOAOAOAOAAOAO
       }
     }
