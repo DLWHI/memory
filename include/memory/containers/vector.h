@@ -19,9 +19,9 @@
 namespace memory {
 // use it at your own risk
 //
-// T type must meet requirements of Erasable
-// Allocator type must meet requirements of Allocator
-// Methods may have additional reuirements on types
+// T is Erasable
+// Allocator is Allocator
+// Methods may have additional requirements on types
 template <typename T, class Allocator = std::allocator<T>>
 class vector {
  public:
@@ -270,8 +270,7 @@ class vector {
   }
   //============================================================================
 
-  // T must meet additional requirement of CopyAssignable and
-  //  CopyInsertable into *this
+  // T is CopyAssignable and CopyInsertable into *this
   MEMORY_CPP20CONSTEXPR void assign(size_type count, const_reference value) {
     if (count > max_size()) {
       throw std::length_error("Invalid count provided");
@@ -403,8 +402,7 @@ class vector {
     --size_;
   }
 
-  // T must meet additional requirements of CopyAssignable
-  //   and CopyInsertable into *this
+  // T is CopyAssignable and CopyInsertable into *this
   MEMORY_CPP20CONSTEXPR iterator insert(const_iterator pos, const_reference value) {
     return emplace(pos, value);
   }
@@ -415,49 +413,76 @@ class vector {
     return emplace(pos, std::forward<T>(value));
   }
 
-  // T must meet additional requirements of CopyAssignable
-  //   and CopyInsertable into *this
-  MEMORY_CPP20CONSTEXPR iterator insert(const_iterator pos, size_type count,
-                            const_reference value) {
+  // T is CopyAssignable and CopyInsertable into *this
+  MEMORY_CPP20CONSTEXPR iterator insert(const_iterator pos, size_type count, const_reference value) {
     size_type ind = pos - begin();
-    if (size_ + count > cap_ || !std::is_nothrow_swappable<T>::value) {
-      
-    } else if constexpr (std::is_nothrow_swappable<T>::value) {
+    if (size_ + count >= cap_) {
+      size_type nsize = std::max(cap_*kCapMul + 1, size_ + count);
+      size_type copied = 0;
+      pointer p = create_buffer(nsize, count, ind, value);
+      try {
+        safe_move(p, ptr_, ptr_ + ind);
+        copied = ind;
+        safe_move(p + ind + count, ptr_ + ind, ptr_ + size_);
+      } catch (...) {
+        destroy(p + ind, count);
+        destroy(p, copied);
+        dealloc(p, nsize);
+        throw;
+      }
+      swap_out_buffer(p, nsize);   
+    } else {
       construct(ptr_ + size_, count, value);
-      std::reverse(ptr_, ptr_ + size_ + count);
-      std::reverse(ptr_, ptr_ + count);
-      std::reverse(ptr_ + count, ptr_ + size_ + count);
+      try {
+        std::rotate(ptr_ + ind, ptr_ + size_, ptr_ + size_ + count);      
+      } catch (...) {
+        destroy(ptr_ + size_, count);
+        throw;
+      }
     }
     size_ += count;
-    return begin();
+    return begin() + ind;
   }
 
-  // T must meet additional requirements of Swappable, MoveAssignable,
-  //   MoveConstructible, EmplaceConstructible and MoveInsertable into *this
+  // T is Swappable, MoveAssignable, MoveConstructible, EmplaceConstructible and MoveInsertable into *this
   template <typename InputIt>
   MEMORY_CPP20CONSTEXPR iterator insert(const_iterator pos, InputIt first, InputIt last) {
-    // size_type ind = pos - begin();
-    // size_type count = std::distance(first, last);
-    // if (count + size_ >= buf_.cap || !std::is_nothrow_swappable<T>::value) {
-    //   pointer_buffer temp(std::max(kCapMul * buf_.cap, size_ + count), &al_,
-    //                       ptr_);
-    //   assign(temp.p,  first, last);
-    //   try {
-    //     split_buffer(temp.p,  ind, count);
-    //   } catch (...) {
-    //     destroy_content(temp.p,  count);
-    //     throw;
-    //   }
-    //   buf_.swap(temp);
-    //   destroy_content(temp.p,  size_);
-    // } else if constexpr (std::is_nothrow_swappable<T>::value) {
-    //   assign(ptr_ + size_, first, last);
-    //   std::reverse(ptr_, ptr_ + size_ + count);
-    //   std::reverse(ptr_, ptr_ + count);
-    //   std::reverse(ptr_ + count, ptr_ + size_ + count);
-    // }
-    // size_ += count;
-    return begin();
+    size_type ind = pos - begin();
+    size_type count = 0;
+    if constexpr (std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<InputIt>::iterator_category>::value) {
+      count = std::distance(first, last);
+      if (size_ + count >= cap_ || !std::is_nothrow_swappable<T>::value) {
+        size_type nsize = std::max(cap_*kCapMul + 1, size_ + count);
+        size_type copied = 0;
+        pointer p = create_buffer(nsize, ind, first, last);
+        try {
+          safe_move(p, ptr_, ptr_ + ind);
+          copied = ind;
+          safe_move(p + ind + count, ptr_ + ind, ptr_ + size_);
+        } catch (...) {
+          destroy(p + ind, count);
+          destroy(p, copied);
+          dealloc(p, nsize);
+          throw;
+        }
+        swap_out_buffer(p, nsize);   
+      } else if constexpr (std::is_nothrow_swappable<T>::value) {
+        fill(ptr_ + size_, first, last);
+        std::rotate(ptr_ + ind, ptr_ + size_, ptr_ + size_ + count);
+      }
+    } else {
+      try {
+        for (; first != last; ++first, ++count) {
+          emplace_back(*first);
+        }
+        std::rotate(ptr_ + ind, ptr_ + size_, ptr_ + size_ + count);
+      } catch (...) {
+        destroy(ptr_ + size_, count);
+        throw;
+      }
+    }
+    size_ += count;
+    return begin() + ind;
   }
 
   // Same as insert(pos, values.begin(), values.end())
@@ -469,48 +494,41 @@ class vector {
   // T must meet additional requirements of MoveAssignable
   MEMORY_CPP20CONSTEXPR iterator erase(const_iterator pos) noexcept(
       std::is_nothrow_move_assignable<T>::value) {
-    // size_type ind = pos - begin();
-    // if constexpr (std::is_nothrow_move_assignable<T>::value) {
-    //   for (size_type i = ind; i < size_ - 1; ++i) {
-    //     ptr_[i] = std::move(ptr_[i + 1]);
-    //   }
-    //   al_traits::destroy(al_, ptr_ + size_ - 1);
-    // } else {
-    //   pointer_buffer temp(buf_.cap, &al_, ptr_);
-    //   split_buffer(temp.p,  ind + 1, -1);
-    //   buf_.swap(temp);
-    //   destroy_content(temp.p,  size_);
-    // }
-    // --size_;
-    return begin();
+    size_type ind = pos - begin();
+    for (size_type i = ind; i < size_ - 1; ++i) {
+      if constexpr (std::is_move_assignable<T>::value) {
+        ptr_[i] = std::move(ptr_[i + 1]);
+      } else {
+        ptr_[i] = ptr_[i + 1];
+      }
+    }
+    std::allocator_traits<Allocator>::destroy(al_, ptr_ + size_ - 1);
+    --size_;
+    return begin() + ind;
   }
 
   // T must meet additional requirements of MoveAssignable
-  MEMORY_CPP20CONSTEXPR iterator erase(const_iterator first, const_iterator last) noexcept(
-      std::is_nothrow_move_assignable<T>::value) {
-    // size_type start = first - begin();
-    // size_type finish = last - begin();
-    // size_type count = finish - start;
-    // if constexpr (std::is_nothrow_move_assignable<T>::value) {
-    //   for (size_type i = start; i < size_ - count; ++i) {
-    //     ptr_[i] = std::move(ptr_[i + count]);
-    //   }
-    //   destroy_content(ptr_ + size_ - count, count);
-    // } else {
-    //   pointer_buffer temp(buf_.cap, &al_, ptr_);
-    //   split_buffer(temp.p,  finish, -count);
-    //   buf_.swap(temp);
-    //   destroy_content(temp.p,  size_);
-    // }
-    // size_ -= count;
-    return begin();
+  MEMORY_CPP20CONSTEXPR iterator erase(const_iterator first, const_iterator last) noexcept(std::is_nothrow_move_assignable<T>::value) {
+    size_type start = first - begin();
+    size_type finish = last - begin();
+    size_type count = finish - start;
+    for (size_type i = start; i < size_ - count; ++i) {
+      if constexpr (std::is_move_assignable<T>::value) {
+        ptr_[i] = std::move(ptr_[i + count]);
+      } else {
+        ptr_[i] = ptr_[i + count];
+      }
+    }
+    destroy(ptr_ + size_ - count, count);
+    size_ -= count;
+    return begin() + start;
   }
 
   // T is EmplaceConstrutible from args, MoveInsertable into *this and MoveAssignable
   template <typename... Args>
   MEMORY_CPP20CONSTEXPR iterator emplace(const_iterator pos, Args&&... args) {
     size_type ind = pos - begin();
-    if (size_ >= cap_ || (!std::is_nothrow_move_constructible<T>::value && !std::is_nothrow_move_assignable<T>::value)) {
+    if (size_ >= cap_ || !std::is_nothrow_move_constructible<T>::value || !std::is_nothrow_move_assignable<T>::value) {
       pointer p = create_buffer(cap_*kCapMul + 1, 1, ind, std::forward<Args>(args)...);
       size_type copied = 0;
       try {
@@ -524,12 +542,9 @@ class vector {
         throw;
       }
       swap_out_buffer(p, cap_*kCapMul + 1);
-   } else {
+   } else if constexpr (std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value){
       T val(std::forward<Args>(args)...);
-      std::allocator_traits<Allocator>::construct(al_, ptr_ + size_, std::move(ptr_[size_ - 1]));
-      for (size_type i = size_ - 1; i > ind; --i) {
-        ptr_[i] = std::move(ptr_[i - 1]);
-      }
+      shift_right(ind, 1);
       ptr_[ind] = std::move(val);
     }
     ++size_;
@@ -687,7 +702,7 @@ class vector {
   MEMORY_CPP20CONSTEXPR void copy_assign(size_type count, FwdIt first, FwdIt last) {
     pointer p = ptr_;
     if (cap_ < count) {
-      p = create_buffer(count, first, last);
+      p = create_buffer(count, 0, first, last);
       swap_out_buffer(p, count);
     } else {
       pointer end = ptr_ + size_;
@@ -707,7 +722,7 @@ class vector {
   MEMORY_CPP20CONSTEXPR void move_assign(size_type count, FwdIt first, FwdIt last) {
     pointer p = ptr_;
     if (cap_ < count) {
-      p = create_buffer(count, first, last);
+      p = create_buffer(count, 0, first, last);
       swap_out_buffer(p, count);
     } else {
       pointer end = ptr_ + size_;
@@ -737,10 +752,10 @@ class vector {
 
   // T is MoveInsertable
   template <typename FwdIt>
-  MEMORY_CPP20CONSTEXPR pointer create_buffer(size_type size, FwdIt first, FwdIt last) {
+  MEMORY_CPP20CONSTEXPR pointer create_buffer(size_type size, size_type ind, FwdIt first, FwdIt last) {
     pointer p = alloc(size);
     try {
-      fill(p, first, last);
+      fill(p + ind, first, last);
     } catch(...) {
       dealloc(p, size);
       throw;
@@ -781,6 +796,17 @@ class vector {
     std::swap(size, cap_);
     destroy(new_buf, size_);
     dealloc(new_buf, size);
+  }
+
+  // T is MoveInsertable and MoveAssingable
+  MEMORY_CPP20CONSTEXPR void shift_right(size_type index, size_type offset) noexcept {
+    size_type i = size_;
+    for (; i > size_ - offset; --i) {
+      std::allocator_traits<Allocator>::construct(al_, ptr_ + size_ + offset - 1, std::move(ptr_[size_ - offset]));
+    }
+    for (; i > index; --i) {
+      ptr_[i] = std::move(ptr_[i - offset]);
+    }  
   }
 
   size_type size_;
