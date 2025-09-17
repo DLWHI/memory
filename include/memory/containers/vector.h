@@ -416,30 +416,23 @@ class vector {
   // T is CopyAssignable and CopyInsertable into *this
   MEMORY_CPP20CONSTEXPR iterator insert(const_iterator pos, size_type count, const_reference value) {
     size_type ind = pos - begin();
+    size_type nsize = cap_;
     if (size_ + count >= cap_) {
-      size_type nsize = std::max(cap_*kCapMul + 1, size_ + count);
-      size_type copied = 0;
-      pointer p = create_buffer(nsize, count, ind, value);
-      try {
-        safe_move(p, ptr_, ptr_ + ind);
-        copied = ind;
-        safe_move(p + ind + count, ptr_ + ind, ptr_ + size_);
-      } catch (...) {
-        destroy(p + ind, count);
-        destroy(p, copied);
-        dealloc(p, nsize);
-        throw;
-      }
-      swap_out_buffer(p, nsize);   
-    } else {
-      construct(ptr_ + size_, count, value);
-      try {
-        std::rotate(ptr_ + ind, ptr_ + size_, ptr_ + size_ + count);      
-      } catch (...) {
-        destroy(ptr_ + size_, count);
-        throw;
-      }
+      nsize = std::max(cap_*kCapMul + 1, size_ + count);
     }
+    size_type copied = 0;
+    pointer p = create_buffer(nsize, count, ind, value);
+    try {
+      safe_move(p, ptr_, ptr_ + ind);
+      copied = ind;
+      safe_move(p + ind + count, ptr_ + ind, ptr_ + size_);
+    } catch (...) {
+      destroy(p + ind, count);
+      destroy(p, copied);
+      dealloc(p, nsize);
+      throw;
+    }
+    swap_out_buffer(p, nsize);    
     size_ += count;
     return begin() + ind;
   }
@@ -544,7 +537,10 @@ class vector {
       swap_out_buffer(p, cap_*kCapMul + 1);
    } else if constexpr (std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value){
       T val(std::forward<Args>(args)...);
-      shift_right(ind, 1);
+      std::allocator_traits<Allocator>::construct(al_, ptr_ + size_, std::move(ptr_[size_ - 1]));
+      for (size_type i = size_ - 1; i > ind; --i) {
+        ptr_[i] = std::move(ptr_[i - 1]);
+      }
       ptr_[ind] = std::move(val);
     }
     ++size_;
@@ -752,7 +748,7 @@ class vector {
 
   // T is MoveInsertable
   template <typename FwdIt>
-  MEMORY_CPP20CONSTEXPR pointer create_buffer(size_type size, size_type ind, FwdIt first, FwdIt last) {
+  MEMORY_CPP20CONSTEXPR typename std::enable_if<std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<FwdIt>::iterator_category>::value, pointer>::type create_buffer(size_type size, size_type ind, FwdIt first, FwdIt last) {
     pointer p = alloc(size);
     try {
       fill(p + ind, first, last);

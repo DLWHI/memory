@@ -26,21 +26,21 @@ constexpr static std::size_t loop = 15;
 #endif
 
 #if __cplusplus >= 202002L
-// constexpr std::size_t constexpr_check(std::size_t val) {
-//   memory::vector<std::size_t> vec = {1, 2, 3, 4, 5};
-//   vec.emplace(vec.end(), 7);
-//   vec.reserve(100);
-//   vec.push_back(6);
-//   vec.erase(--vec.end());
-//   vec.insert(vec.begin(), 0);
-//   vec.insert(vec.begin() + 1, 0);
-//   vec.insert(vec.begin() + 3, -1);
-//   vec.insert(--vec.end(), -1);
-//   vec.shrink_to_fit();
-//   vec.assign({6, 6, 6, 7, 7, 7});
-//   vec.push_back(val);
-//   return *(vec.end() - 1);
-// }
+constexpr std::size_t constexpr_check(std::size_t val) {
+  memory::vector<std::size_t> vec = {1, 2, 3, 4, 5};
+  vec.emplace(vec.end(), 7);
+  vec.reserve(100);
+  vec.push_back(6);
+  vec.erase(--vec.end());
+  vec.insert(vec.begin(), 0);
+  vec.insert(vec.begin() + 1, 0);
+  vec.insert(vec.begin() + 3, -1);
+  vec.insert(--vec.end(), -1);
+  vec.shrink_to_fit();
+  vec.assign({6, 6, 6, 7, 7, 7});
+  vec.push_back(val);
+  return *(vec.end() - 1);
+}
 #endif
 
 //==============================================================================
@@ -1277,10 +1277,10 @@ TEST(VectorTest, insert_not_safe_counted) {
   }
 }
 
-TEST(VectorTest, insert_counted_no_realloc) {
+TEST(VectorTest, insert_counted_enough_space) {
   memory::vector<safe> vec(77);
-  safe *ptr = vec.data();
   vec.resize(25);
+  std:size_t cap = vec.capacity();
 
   std::size_t insert = 8;
   std::size_t count = 9;
@@ -1288,14 +1288,13 @@ TEST(VectorTest, insert_counted_no_realloc) {
   auto pos = vec.insert(vec.begin() + insert, count, safe("inserted"));
 
   ASSERT_EQ(vec.size(), 25 + count);
-  ASSERT_EQ(vec.data(), ptr);
+  ASSERT_EQ(vec.capacity(), cap);
   ASSERT_EQ(pos, vec.begin() + insert);
   ASSERT_EQ(*pos, safe("inserted"));
   auto i = vec.begin();
 
   for (; i != pos; ++i) {
     ASSERT_NE(*i, safe("inserted"));
-    ASSERT_EQ(i->birth, constructed::kDef);
   }
   for (; i != pos + count; ++i) {
     ASSERT_EQ(*i, safe("inserted"));
@@ -1893,9 +1892,9 @@ TEST(VectorTest, stream) {
 }
 
 #if __cplusplus >= 202002L
-// TEST(VectorTest, valid_constexpr) {
-//   constexpr std::size_t cexper = constexpr_check(0);
-//   ASSERT_EQ(cexper, 0);
-// }
+TEST(VectorTest, valid_constexpr) {
+  constexpr std::size_t cexper = constexpr_check(0);
+  ASSERT_EQ(cexper, 0);
+}
 #endif
 
