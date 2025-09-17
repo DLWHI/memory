@@ -416,23 +416,25 @@ class vector {
   // T is CopyAssignable and CopyInsertable into *this
   MEMORY_CPP20CONSTEXPR iterator insert(const_iterator pos, size_type count, const_reference value) {
     size_type ind = pos - begin();
-    size_type nsize = cap_;
-    if (size_ + count >= cap_) {
-      nsize = std::max(cap_*kCapMul + 1, size_ + count);
-    }
-    size_type copied = 0;
-    pointer p = create_buffer(nsize, count, ind, value);
-    try {
-      safe_move(p, ptr_, ptr_ + ind);
-      copied = ind;
-      safe_move(p + ind + count, ptr_ + ind, ptr_ + size_);
-    } catch (...) {
-      destroy(p + ind, count);
-      destroy(p, copied);
-      dealloc(p, nsize);
-      throw;
-    }
-    swap_out_buffer(p, nsize);    
+    if (size_ + count >= cap_ || !std::is_nothrow_swappable<T>::value) {
+      size_type nsize = std::max(cap_*kCapMul + 1, size_ + count);
+      size_type copied = 0;
+      pointer p = create_buffer(nsize, count, ind, value);
+      try {
+        safe_move(p, ptr_, ptr_ + ind);
+        copied = ind;
+        safe_move(p + ind + count, ptr_ + ind, ptr_ + size_);
+      } catch (...) {
+        destroy(p + ind, count);
+        destroy(p, copied);
+        dealloc(p, nsize);
+        throw;
+      }
+      swap_out_buffer(p, nsize);   
+    } else if constexpr (std::is_nothrow_swappable<T>::value) {
+      construct(ptr_ + size_, count, value);
+      std::rotate(ptr_ + ind, ptr_ + size_, ptr_ + size_ + count);
+    }   
     size_ += count;
     return begin() + ind;
   }
@@ -442,28 +444,7 @@ class vector {
   MEMORY_CPP20CONSTEXPR iterator insert(const_iterator pos, InputIt first, InputIt last) {
     size_type ind = pos - begin();
     size_type count = 0;
-    if constexpr (std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<InputIt>::iterator_category>::value) {
-      count = std::distance(first, last);
-      if (size_ + count >= cap_ || !std::is_nothrow_swappable<T>::value) {
-        size_type nsize = std::max(cap_*kCapMul + 1, size_ + count);
-        size_type copied = 0;
-        pointer p = create_buffer(nsize, ind, first, last);
-        try {
-          safe_move(p, ptr_, ptr_ + ind);
-          copied = ind;
-          safe_move(p + ind + count, ptr_ + ind, ptr_ + size_);
-        } catch (...) {
-          destroy(p + ind, count);
-          destroy(p, copied);
-          dealloc(p, nsize);
-          throw;
-        }
-        swap_out_buffer(p, nsize);   
-      } else if constexpr (std::is_nothrow_swappable<T>::value) {
-        fill(ptr_ + size_, first, last);
-        std::rotate(ptr_ + ind, ptr_ + size_, ptr_ + size_ + count);
-      }
-    } else {
+    if constexpr (!std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<InputIt>::iterator_category>::value) {
       try {
         for (; first != last; ++first, ++count) {
           emplace_back(*first);
@@ -471,10 +452,32 @@ class vector {
         std::rotate(ptr_ + ind, ptr_ + size_, ptr_ + size_ + count);
       } catch (...) {
         destroy(ptr_ + size_, count);
+        size_ -= count;
+        throw;
+      }   
+    } else if (size_ + count >= cap_ || !std::is_nothrow_swappable<T>::value) {
+      count = std::distance(first, last);
+      size_type nsize = std::max(cap_*kCapMul + 1, size_ + count);
+      size_type copied = 0;
+      pointer p = create_buffer(nsize, ind, first, last);
+      try {
+        safe_move(p, ptr_, ptr_ + ind);
+        copied = ind;
+        safe_move(p + ind + count, ptr_ + ind, ptr_ + size_);
+      } catch (...) {
+        destroy(p + ind, count);
+        destroy(p, copied);
+        dealloc(p, nsize);
         throw;
       }
+      swap_out_buffer(p, nsize);   
+      size_ += count;
+    } else if constexpr (std::is_nothrow_swappable<T>::value) {
+      count = std::distance(first, last);
+      fill(ptr_ + size_, first, last);
+      std::rotate(ptr_ + ind, ptr_ + size_, ptr_ + size_ + count);
+      size_ += count;
     }
-    size_ += count;
     return begin() + ind;
   }
 
